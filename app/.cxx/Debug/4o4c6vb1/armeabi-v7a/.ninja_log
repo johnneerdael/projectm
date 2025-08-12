@@ -1,0 +1,21 @@
+# ninja log v5
+0	7	0	clean	a47fbc9a6268986c
+1	94	1754990581143188119	build.ninja	272710e95020c55f
+0	301	1754989670505426049	CMakeFiles/projectmtv.dir/native-lib.cpp.o	1c41085466ef4df9
+303	336	1754989670541820792	/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/build/intermediates/cxx/Debug/4o4c6vb1/obj/armeabi-v7a/libprojectmtv.so	18a389f12abbc479
+1	210	1754990581367969512	CMakeFiles/projectmtv.dir/native-lib.cpp.o	1c41085466ef4df9
+210	253	1754990581411419223	/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/build/intermediates/cxx/Debug/4o4c6vb1/obj/armeabi-v7a/libprojectmtv.so	18a389f12abbc479
+0	6	0	clean	a47fbc9a6268986c
+2	311	1755006696725266435	CMakeFiles/projectmtv.dir/native-lib.cpp.o	1c41085466ef4df9
+311	387	1755006696802975445	/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/build/intermediates/cxx/Debug/4o4c6vb1/obj/armeabi-v7a/libprojectmtv.so	18a389f12abbc479
+0	6	0	clean	a47fbc9a6268986c
+0	12	0	clean	a47fbc9a6268986c
+2	293	1755007653616909654	CMakeFiles/projectmtv.dir/native-lib.cpp.o	1c41085466ef4df9
+293	359	1755007653683088775	/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/build/intermediates/cxx/Debug/4o4c6vb1/obj/armeabi-v7a/libprojectmtv.so	18a389f12abbc479
+0	6	0	clean	a47fbc9a6268986c
+0	4	0	clean	a47fbc9a6268986c
+2	319	1755008237696491404	CMakeFiles/projectmtv.dir/native-lib.cpp.o	1c41085466ef4df9
+320	390	1755008237767505072	/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/build/intermediates/cxx/Debug/4o4c6vb1/obj/armeabi-v7a/libprojectmtv.so	18a389f12abbc479
+0	7	0	clean	a47fbc9a6268986c
+2	236	1755008467251341182	CMakeFiles/projectmtv.dir/native-lib.cpp.o	1c41085466ef4df9
+237	324	1755008467340931406	/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/build/intermediates/cxx/Debug/4o4c6vb1/obj/armeabi-v7a/libprojectmtv.so	18a389f12abbc479
