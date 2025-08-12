@@ -36,3 +36,5 @@
 0	7	0	clean	a47fbc9a6268986c
 2	1134	1755023884678471581	CMakeFiles/projectmtv.dir/native-lib.cpp.o	e3b05fb8f2a26493
 1135	1465	1755023885013527485	/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/build/intermediates/cxx/Debug/4o4c6vb1/obj/arm64-v8a/libprojectmtv.so	9aba7960b6e2e7d2
+2	951	1755025870063644669	CMakeFiles/projectmtv.dir/native-lib.cpp.o	e3b05fb8f2a26493
+951	1309	1755025870429973849	/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/build/intermediates/cxx/Debug/4o4c6vb1/obj/arm64-v8a/libprojectmtv.so	9aba7960b6e2e7d2

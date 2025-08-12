@@ -1,20 +1,28 @@
-# projectM Android TV 1.2 - Performance & User Experience Update
+# projectM Android TV 1.4 - Resolution Scaling & Viewport Enhancements
 
 ![ProjectM Visualizer for Android TV](https://raw.githubusercontent.com/projectM-visualizer/projectm/master/projectm-android-tv/app/src/main/res/drawable/launcher_icon.png)
+
+## Enhanced Visualization & Resolution Management
+
+We're excited to announce version 1.4 of projectM for Android TV, building on our previous fixes for viewport scaling and resolution-related artifacts with further improvements and optimizations. This update continues to ensure visualizations properly stretch to fill the entire screen at all resolutions while providing a smoother, more stable experience.c### ✨ New Features & Fixes in 1.3droid TV 1.3 - Resolution Scaling & Viewport Fixes
+
+![ProjectM Visualizer for Android TV](https://raw.githubusercontent.com/projectM-visualizer/projectm/master/projectm-android-tv/app/src/main/res/drawable/launcher_icon.png)
+
+## Enhanced Visualization & Resolution Fixes
+
+We're excited to announce version 1.3 of projectM for Android TV, focusing on fixing viewport scaling issues and resolution-related artifacts. This update ensures visualizations properly stretch to fill the entire screen at all resolutions while eliminating visual artifacts during resolution changes.
 
 ## � Enhanced Visualization Controls
 
 We're excited to announce version 1.2 of projectM for Android TV, featuring improved performance adaptation, an enhanced loading experience, and better control navigation. This update provides a more responsive and stable visualization experience, especially on lower-end devices.
 
-### ✨ New Features
+### ✨ New Features & Fixes in 1.4
 
-- **Modern Loading Screen** - Visual feedback during the asset extraction process with progress updates
-- **Automatic Resolution Adjustment** - Dynamically lowers resolution based on performance
-- **Enhanced Low Performance Mode** - Smarter performance adaptation with quality level adjustments
-- **Improved Navigation** - Better menu control and D-pad navigation for resolution settings
-- **Visual Feedback** - Toast notifications when changing presets or adjusting resolution
-- **Performance Optimizations** - Enhanced frame rate monitoring and quality adjustments
-- **Bug Fixes** - Improved stability and responsiveness in low-performance conditions
+- **Enhanced Full-Screen Visualization** - Further improved viewport scaling to guarantee visualizations properly stretch to fill the entire screen at all resolutions
+- **Optimized Resolution Management** - Refined the resolution handling system with more robust viewport controls
+- **Stabilized OpenGL Pipeline** - Enhanced error handling and resilience in the rendering process
+- **Improved Performance** - Better resource management and rendering efficiency
+- **Enhanced User Experience** - Ensured correct version display throughout the application
 
 ### 🎵 Existing Features
 
@@ -94,30 +102,31 @@ This application is released under the GPL v2 license, the same as the core proj
 
 ## SHA-256 Checksums
 ```
-projectm-androidtv-1.2.apk: [checksum will be generated after building the final APK]
+projectm-androidtv-1.4.apk: [checksum will be generated after building the final APK]
 ```
 
-## Full Changelog for v1.2
-
-### Added
-- Modern loading screen with progress feedback during asset extraction
-- Automatic resolution adjustment based on performance monitoring
-- Enhanced performance level handling with quality adjustments
-- Improved D-pad navigation in menus and settings
-- Toast notifications when changing presets or adjusting resolution
-- Preset name display in toast notifications when changing presets
-- Automatic resolution reduction for devices with poor performance
-- Background thread for asset extraction with progress monitoring
-- Build script wrapper for easier compilation with correct Java environment
+## Full Changelog for v1.4
 
 ### Fixed
-- Menu navigation with D-pad for resolution selection
-- Improved low performance mode handling
-- Enhanced error recovery in low-performance conditions
-- Better handling of transitions in low-performance mode
-- Optimized rendering for low-end devices
-- Improved menu focus handling and control navigation
-- Fixed java.lang.NullPointerException in GLSurfaceView initialization
+- Further refined resolution scaling - ensuring visualizations properly stretch to fill the entire screen at all resolutions
+- Improved OpenGL error handling to prevent potential rendering issues
+- Ensured version display consistency across the application
+- Enhanced viewport stability during resolution and orientation changes
+- Optimized rendering during transitions between different resolution modes
+
+### Added
+- Added additional viewport management safeguards
+- Added version consistency checks throughout the application
+- Added improved diagnostic logging for viewport management
+- Added enhanced error recovery for OpenGL operations
+- Added more comprehensive performance monitoring
+
+### Changed
+- Updated version information to 1.4 throughout the application
+- Refined OpenGL state management for more consistent rendering
+- Enhanced viewport handling with more robust error checking
+- Improved initialization sequence with better error recovery
+- Optimized resource utilization during rendering
 
 ### Changed
 - Updated loading sequence for better user feedback

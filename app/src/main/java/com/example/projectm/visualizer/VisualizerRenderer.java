@@ -84,6 +84,19 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 gl) {
         try {
             if (mProjectMInitialized) {
+                // Clear the entire screen to black to avoid artifacts when changing resolution
+                GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+                
+                // Always set viewport to stretch content to full screen
+                // This ensures the visualization is stretched to fill the entire screen
+                try {
+                    ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                } catch (Exception e) {
+                    // Fall back to direct GL call if ProjectMJNI method fails
+                    GLES20.glViewport(0, 0, mWidth, mHeight);
+                }
+                
                 // Track performance
                 frameCount++;
                 long now = System.currentTimeMillis();
@@ -153,6 +166,14 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                 // Render the frame
                 ProjectMJNI.onDrawFrame();
                 
+                // Ensure viewport is still correct after rendering
+                try {
+                    ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                } catch (Exception e) {
+                    // Fall back to direct GL call if ProjectMJNI method fails
+                    GLES20.glViewport(0, 0, mWidth, mHeight);
+                }
+                
                 // Auto-change presets if enabled
                 if (autoChangeEnabled) {
                     if (now - lastPresetChange > PRESET_CHANGE_INTERVAL) {
@@ -184,7 +205,18 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
         mWidth = width;
         mHeight = height;
         
-        // If custom resolution is set, use it instead of actual surface dimensions
+        // Always set the viewport to the full screen size
+        // This makes sure the visualization is stretched to fill the entire screen
+        try {
+            ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+            Log.d(TAG, "Set viewport to full screen: " + mWidth + "x" + mHeight);
+        } catch (Exception e) {
+            // Fall back to direct GL call if ProjectMJNI method fails
+            GLES20.glViewport(0, 0, mWidth, mHeight);
+            Log.d(TAG, "Set viewport via GLES20 to full screen: " + mWidth + "x" + mHeight);
+        }
+        
+        // If custom resolution is set, use it instead of actual surface dimensions for rendering
         int renderWidth = (customRenderWidth > 0) ? customRenderWidth : width;
         int renderHeight = (customRenderHeight > 0) ? customRenderHeight : height;
         
@@ -192,10 +224,21 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
             Log.d(TAG, "Using custom render dimensions: " + renderWidth + "x" + renderHeight);
         }
         
+        // Clear the screen to avoid artifacts when changing resolution
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+        
         try {
             if (mProjectMInitialized) {
                 ProjectMJNI.onSurfaceChanged(renderWidth, renderHeight);
                 Log.d(TAG, "Surface resized successfully");
+                
+                // Make sure the viewport is still set correctly after native call
+                try {
+                    ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                } catch (Exception e) {
+                    GLES20.glViewport(0, 0, mWidth, mHeight);
+                }
             } else if (mAssetPath != null) {
                 Log.d(TAG, "ProjectM not initialized yet, initializing now with: " + renderWidth + "x" + renderHeight);
                 Log.d(TAG, "Asset path: " + mAssetPath);
@@ -225,6 +268,13 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                 // Verify initialization by getting current preset name
                 String currentPreset = ProjectMJNI.getCurrentPresetName();
                 Log.i(TAG, "Initial preset: " + currentPreset);
+                
+                // Make sure the viewport is still set correctly after initialization
+                try {
+                    ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                } catch (Exception e) {
+                    GLES20.glViewport(0, 0, mWidth, mHeight);
+                }
             } else {
                 Log.w(TAG, "Cannot initialize projectM: assetPath is null");
             }
@@ -381,6 +431,8 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
             return;
         }
         
+        Log.d(TAG, "Setting render resolution to " + width + "x" + height + " (display size: " + mWidth + "x" + mHeight + ")");
+        
         // Check if the requested resolution is reasonable
         boolean isHighRes = (width >= 2560 || height >= 1440);
         
@@ -399,6 +451,11 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
             Log.i(TAG, "Adjusted resolution to " + width + "x" + height);
         }
         
+        // Store the previous resolution values in case we need to revert
+        int oldWidth = customRenderWidth;
+        int oldHeight = customRenderHeight;
+        
+        // Update the custom resolution values
         customRenderWidth = width;
         customRenderHeight = height;
         Log.d(TAG, "Custom resolution set to " + width + "x" + height);
@@ -406,18 +463,50 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
         // If already initialized, update the size now
         if (mProjectMInitialized) {
             try {
-                // We can't change OpenGL context dimensions directly, so we notify the native code
-                // to use a different internal buffer size for rendering
+                // Clear the screen to avoid artifacts when changing resolution
+                GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+                
+                // CRITICAL: Always set viewport to full screen size BEFORE changing the render resolution
+                // This ensures the visualization is stretched to fit the full screen
+                try {
+                    ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                    Log.d(TAG, "Set viewport to full screen: " + mWidth + "x" + mHeight);
+                } catch (Exception e) {
+                    // Fall back to direct GL call if ProjectMJNI method fails
+                    GLES20.glViewport(0, 0, mWidth, mHeight);
+                    Log.d(TAG, "Set viewport via GLES20 to full screen: " + mWidth + "x" + mHeight);
+                }
+                
+                // We tell ProjectM to render at the custom resolution
                 ProjectMJNI.onSurfaceChanged(width, height);
-                Log.i(TAG, "Applied new resolution " + width + "x" + height);
+                Log.i(TAG, "Applied new render resolution " + width + "x" + height);
+                
+                // CRITICAL: Set viewport again to ensure it wasn't changed by the native call
+                try {
+                    ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                    Log.d(TAG, "Re-set viewport after resolution change to: " + mWidth + "x" + mHeight);
+                } catch (Exception e) {
+                    // Fall back to direct GL call if ProjectMJNI method fails
+                    GLES20.glViewport(0, 0, mWidth, mHeight);
+                }
                 
                 // Display a warning if this is a high resolution on a device that might struggle
                 if (isHighRes && currentFps < 30) {
                     Log.w(TAG, "High resolution may impact performance. Current FPS: " + currentFps);
-                    // In a real app, we might show a toast or other UI notification here
                 }
+                
+                // Force a render to update the screen with new resolution and viewport
+                GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+                ProjectMJNI.onDrawFrame();
+                
             } catch (Exception e) {
                 Log.e(TAG, "Error changing resolution", e);
+                
+                // Revert to previous resolution on error
+                customRenderWidth = oldWidth;
+                customRenderHeight = oldHeight;
                 
                 // Fallback to a safer resolution if there was an error
                 if (width > 1280 || height > 720) {
@@ -425,7 +514,29 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                     customRenderWidth = 1280;
                     customRenderHeight = 720;
                     try {
+                        // Clear screen and set viewport again
+                        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+                        
+                        // Always ensure viewport is full screen
+                        try {
+                            ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                        } catch (Exception ex) {
+                            GLES20.glViewport(0, 0, mWidth, mHeight);
+                        }
+                        
+                        // Update the internal render size
                         ProjectMJNI.onSurfaceChanged(1280, 720);
+                        
+                        // Set viewport again after the native call
+                        try {
+                            ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                        } catch (Exception ex) {
+                            GLES20.glViewport(0, 0, mWidth, mHeight);
+                        }
+                        
+                        // Force another render
+                        ProjectMJNI.onDrawFrame();
                     } catch (Exception e2) {
                         Log.e(TAG, "Fallback resolution also failed", e2);
                     }

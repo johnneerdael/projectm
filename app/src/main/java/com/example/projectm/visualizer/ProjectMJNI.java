@@ -190,6 +190,23 @@ public class ProjectMJNI {
         }
     }
     
+    // Set GL viewport for correct scaling regardless of render resolution
+    public static void setViewport(int x, int y, int width, int height) {
+        try {
+            Log.d(TAG, "Setting GL viewport: x=" + x + ", y=" + y + ", width=" + width + ", height=" + height);
+            try {
+                nativeSetViewport(x, y, width, height);
+                Log.d(TAG, "Native viewport set successfully");
+            } catch (UnsatisfiedLinkError e) {
+                // Native method not implemented, we'll handle it in Java instead
+                Log.d(TAG, "Native viewport setting not implemented, using Java implementation");
+                android.opengl.GLES20.glViewport(x, y, width, height);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting viewport", e);
+        }
+    }
+    
     // Actual native method declarations
     private static native void nativeOnSurfaceCreated(int windowWidth, int windowHeight, String assetPath);
     private static native void nativeOnSurfaceChanged(int windowWidth, int windowHeight);
@@ -205,7 +222,8 @@ public class ProjectMJNI {
     private static native String nativeGetVersion();
     private static native int nativeGetPresetCount();
     
-    // This method might not be implemented in the native code yet,
+    // These methods might not be implemented in the native code yet,
     // so we handle the UnsatisfiedLinkError gracefully
     private static native void nativeSetPerformanceLevel(int level);
+    private static native void nativeSetViewport(int x, int y, int width, int height);
 }

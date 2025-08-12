@@ -120,6 +120,15 @@ public class VisualizerView extends GLSurfaceView {
         try {
             // Check if we have a valid renderer before requesting a render
             if (renderer != null) {
+                // Force a refresh of the entire surface
+                queueEvent(() -> {
+                    // This will run on the GL thread
+                    android.opengl.GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                    android.opengl.GLES20.glClear(android.opengl.GLES20.GL_COLOR_BUFFER_BIT | 
+                                                  android.opengl.GLES20.GL_DEPTH_BUFFER_BIT);
+                });
+                
+                // Request the actual render
                 super.requestRender();
             } else {
                 Log.d(TAG, "Skipping requestRender - renderer not set yet");

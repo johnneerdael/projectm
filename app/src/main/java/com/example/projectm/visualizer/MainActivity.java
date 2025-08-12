@@ -1264,10 +1264,19 @@ public class MainActivity extends Activity {
                             final android.content.SharedPreferences finalPrefs = prefs;
                             
                             runOnUiThread(() -> {
-                                // Apply new resolution
-                                renderer.setRenderResolution(finalWidth, finalHeight);
-                                Log.i(TAG, "Auto-adjusted resolution to " + finalWidth + "x" + finalHeight + 
-                                     " due to low FPS (" + finalFps + ")");
+                                // First ensure visualization view is properly set up
+                                if (visualizerView != null) {
+                                    // Force a clear frame to remove any artifacts before changing resolution
+                                    visualizerView.requestRender();
+                                    
+                                    // Apply new resolution
+                                    renderer.setRenderResolution(finalWidth, finalHeight);
+                                    Log.i(TAG, "Auto-adjusted resolution to " + finalWidth + "x" + finalHeight + 
+                                         " due to low FPS (" + finalFps + ")");
+                                    
+                                    // Request another render to immediately show the changed resolution
+                                    visualizerView.requestRender();
+                                }
                                 
                                 // Update radio button if UI is initialized
                                 if (resolutionGroup != null) {
@@ -1299,8 +1308,8 @@ public class MainActivity extends Activity {
             fpsCheckHandler.postDelayed(fpsCheckRunnable, FPS_CHECK_INTERVAL);
         };
         
-        // Start the periodic checks
-        fpsCheckHandler.postDelayed(fpsCheckRunnable, FPS_CHECK_INTERVAL);
+        // Delay the first check to allow system to stabilize
+        fpsCheckHandler.postDelayed(fpsCheckRunnable, FPS_CHECK_INTERVAL * 2);
         Log.d(TAG, "Auto resolution adjustment monitoring started");
     }
     

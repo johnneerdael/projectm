@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <string>
 #include <android/log.h>
+#include <GLES2/gl2.h> // For glViewport
 #include "projectM-4/projectM.h"
 #include "projectM-4/playlist.h"
 
@@ -226,7 +227,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetVersion(JNIEnv *env, j
     if (g_projectm) {
         // In projectM-4, we can use various info functions if available
         // This is an example - actual implementation depends on projectM API
-        return env->NewStringUTF("ProjectM-4 Android TV Edition");
+        return env->NewStringUTF("ProjectM-4 Android TV Edition 1.4");
     }
     return env->NewStringUTF("ProjectM-4");
 }
@@ -239,4 +240,14 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetPresetCount(JNIEnv *en
         return static_cast<jint>(count);
     }
     return 0;
+}
+
+// Implementation of the native viewport setting
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetViewport(JNIEnv *env, jclass clazz, 
+                                                                  jint x, jint y, jint width, jint height) {
+    // Set OpenGL viewport directly - this ensures the visualization is stretched to fit the full screen
+    glViewport(x, y, width, height);
+    LOGI("Native setViewport called: %d,%d %dx%d", x, y, width, height);
 }

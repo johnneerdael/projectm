@@ -53,7 +53,7 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="24dp"
-        android:text="v1.1"
+        android:text="v1.4"
         android:textColor="#777777"
         android:textSize="14sp" />
 </RelativeLayout>
