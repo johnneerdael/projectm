@@ -14,7 +14,7 @@
     <!-- Overlay menu that appears when needed -->
     <LinearLayout
         android:id="@+id/overlay_menu"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
@@ -24,14 +24,26 @@
         android:padding="16dp"
         android:visibility="gone">
 
-        <TextView
-            android:id="@+id/preset_name"
-            android:layout_width="wrap_content"
+        <HorizontalScrollView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:layout_marginBottom="16dp"
-            android:text="Current Preset: Unknown" />
+            android:scrollbars="none"
+            android:layout_marginBottom="16dp">
+            
+            <TextView
+                android:id="@+id/preset_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:singleLine="true"
+                android:ellipsize="marquee"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:scrollHorizontally="true"
+                android:text="Current Preset: Unknown" />
+        </HorizontalScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -64,7 +76,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="#FFFFFF"
-                android:text="Duration: " />
+                android:text="Preset Duration: " />
 
             <TextView
                 android:id="@+id/preset_duration_text"
@@ -78,8 +90,40 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:max="60"
+                android:max="90"
+                android:min="10"
                 android:progress="30"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+        
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:text="Transition: " />
+
+            <TextView
+                android:id="@+id/transition_duration_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:text="7s" />
+
+            <SeekBar
+                android:id="@+id/transition_duration_seekbar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="10"
+                android:min="0"
+                android:progress="7"
                 android:layout_marginStart="8dp" />
         </LinearLayout>
 
@@ -87,7 +131,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center">
+            android:gravity="center"
+            android:layout_marginBottom="16dp">
 
             <Button
                 android:id="@+id/prev_preset_button"
@@ -110,18 +155,75 @@
                 android:text="Next" />
         </LinearLayout>
         
+        <!-- Resolution settings -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:text="Resolution:"
+            android:layout_marginBottom="8dp" />
+            
+        <RadioGroup
+            android:id="@+id/resolution_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+            
+            <RadioButton
+                android:id="@+id/resolution_480p"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="480p"
+                android:textColor="#FFFFFF" />
+                
+            <RadioButton
+                android:id="@+id/resolution_720p"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="720p"
+                android:textColor="#FFFFFF"
+                android:checked="true" />
+                
+            <RadioButton
+                android:id="@+id/resolution_1080p"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="1080p"
+                android:textColor="#FFFFFF" />
+                
+            <RadioButton
+                android:id="@+id/resolution_4k"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="4K"
+                android:textColor="#FFFFFF" />
+        </RadioGroup>
+        
+        <!-- FPS Display -->
+        <TextView
+            android:id="@+id/fps_display"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:text="FPS: --"
+            android:layout_marginBottom="16dp" />
+        
         <!-- Version information -->
         <TextView
             android:id="@+id/version_info"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
             android:textColor="#80FFFFFF"
             android:textSize="12sp"
             android:text="ProjectM Visualizer" />
     </LinearLayout>
 
-    <!-- Help text that shows how to open menu -->
+    <!-- FPS display for when menu is closed -->
     <TextView
         android:id="@+id/help_text"
         android:layout_width="wrap_content"
@@ -129,10 +231,11 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
         android:layout_margin="16dp"
-        android:text="Press MENU to show options"
+        android:text=""
         android:textColor="#80FFFFFF"
         android:textSize="14sp"
         android:padding="8dp"
+        android:visibility="gone"
         android:background="#40000000" />
 
 </RelativeLayout>

@@ -1,17 +1,19 @@
-# projectM Visualizer for Android TV
+# projectM Visualizer for Android TV (v1.2)
 
-![ProjectM Visualizer](app/src/main/res/drawable/launcher_icon.png)
-
-A music visualization powerhouse for your Android TV, bringing the legendary ProjectM (an open-source reimplementation of Milkdrop) to your living room with the complete Cream of the Crop preset collection.
+A music visualization powerhouse for your Android TV, bringing the legendary ProjectM (an open-source reimplementation of Milkdrop) to your living room with the complete Cream of the Crop preset collection and advanced transition controls.
 
 ## Features
 
 - **Full Android TV Integration** - Designed specifically for the big screen with remote-friendly navigation
 - **Complete Preset Library** - Includes the entire Milkdrop Cream of the Crop collection (9,795 presets!)
+- **Modern Loading Experience** - Visual feedback during the lengthy preset extraction process
+- **Advanced Transition Control** - Fine-tune how presets blend from one to another
 - **System Audio Visualization** - Visualizes any audio playing on your device
-- **Adaptive Performance** - Automatically adjusts to maintain smooth performance on all devices
-- **Intuitive Controls** - Simple navigation with your Android TV remote
-  - **Left/Right** - Previous/Next preset
+- **Adaptive Performance** - Automatically adjusts resolution and quality to maintain smooth performance
+- **Auto-Resolution Adjustment** - Dynamically lowers resolution when performance drops below target
+- **Enhanced Low Performance Mode** - Smart quality adjustments for consistent framerate
+- **Intuitive Controls** - Simple navigation with your Android TV remote with improved menu handling
+  - **Left/Right** - Previous/Next preset with instant transitions and visual feedback
   - **Center/Menu** - Toggle settings overlay
   - **Back** - Exit or hide overlay
 
@@ -62,10 +64,15 @@ Boasting an incredible 9,795 presets, the Cream of the Crop pack is a testament 
 
 This implementation includes several features specifically designed for the Android TV platform:
 
+- **Modern Loading Screen** - Visual feedback with progress updates during asset extraction process
 - **Full-screen Immersive Experience** - Utilizes the entire TV screen for maximum visual impact
-- **Remote-Friendly Navigation** - Optimized for d-pad navigation with your TV remote
-- **Automatic Preset Switching** - Configurable timing for hands-free visual variety
-- **Low Power Mode** - Automatically detects performance issues and adapts
+- **Enhanced Remote Navigation** - Improved d-pad controls for menus and settings
+- **Visual Feedback** - Toast notifications when changing presets or adjusting settings
+- **Automatic Preset Switching** - Configurable timing from 10-90 seconds for hands-free visual variety
+- **Smart Transition System** - Smooth transitions for auto-changes, instant cuts for manual navigation
+- **Transition Duration Control** - Adjust blend time between presets from 0-10 seconds
+- **Adaptive Performance** - Automatically detects performance issues and adjusts resolution and quality
+- **Auto-Resolution Adjustment** - Dynamically lowers resolution to maintain target framerate
 - **On-screen Overlay Menu** - Easily accessible controls that auto-hide when not needed
 - **Persistence** - Continues visualizing even when the app loses focus
 - **Version Information** - Easy access to app and library version information
@@ -76,10 +83,14 @@ This implementation includes several features specifically designed for the Andr
 
 The app includes several optimizations for Android TV devices:
 
-- **Adaptive Frame Rate** - Monitors FPS and adjusts rendering complexity
+- **Enhanced Adaptive Frame Rate** - Monitors FPS and automatically adjusts resolution and rendering quality
+- **Auto-Resolution Adjustment** - Dynamically switches between 480p, 720p, 1080p, and 4K based on performance
+- **Visual Performance Feedback** - Toast notifications when resolution is automatically adjusted
+- **Performance Level Management** - Adjusts multiple quality parameters based on device capabilities
+- **Smart Transition Handling** - Uses hard cuts in low performance mode, smooth transitions when performance allows
 - **OpenGL ES Configuration** - Tuned for the perfect balance of quality and performance
-- **Memory Management** - Careful handling of preset loading to avoid OOM errors
-- **Asset Extraction** - Efficient storage and access of preset files
+- **Improved Memory Management** - Careful handling of preset loading to avoid OOM errors
+- **Enhanced Asset Extraction** - Efficient storage and access of preset files with visual progress feedback
 
 ### Audio Processing
 
@@ -93,9 +104,11 @@ Audio is captured from the system output using Android's Visualizer API:
 
 1. Download the APK from the releases section
 2. Install on your Android TV device using your preferred method:
-   - Sideload with adb: `adb install projectm-androidtv.apk`
+   - Sideload with adb: `adb install projectm-androidtv-1.2.apk`
    - Use a file manager app on your Android TV
    - Transfer via USB drive
+   
+If you're updating from a previous version, your preferences will be preserved.
 
 ## Permissions
 
@@ -115,6 +128,16 @@ The app requires the following permissions:
 ## License
 
 This application is released under the same license as ProjectM (GPL v2).
+
+## Usage Tips
+
+- **For a classic "Milkdrop experience":** Keep transitions at 7s and preset duration around 30s
+- **For a more dynamic show:** Try shorter preset durations (10-15s) with shorter transitions (2-3s)
+- **For manual control:** Disable auto-change and use the remote to change presets with hard cuts
+- **For maximum performance:** Let the app automatically adjust resolution, or manually lower it in settings
+- **For a cinematic experience:** Set long preset durations (60-90s) with long transitions (8-10s)
+- **For consistent navigation:** Use single, deliberate button presses when navigating menus
+- **For smooth transitions:** Keep transition duration around 5-7s unless on a low-end device
 
 ---
 

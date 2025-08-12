@@ -68,13 +68,21 @@ public class VisualizerView extends GLSurfaceView {
     @Override
     public void onResume() {
         Log.d(TAG, "onResume called");
-        super.onResume();
+        try {
+            super.onResume();
+        } catch (Exception e) {
+            Log.e(TAG, "Error in VisualizerView.onResume: " + e.getMessage());
+        }
     }
     
     @Override
     public void onPause() {
         Log.d(TAG, "onPause called");
-        super.onPause();
+        try {
+            super.onPause();
+        } catch (Exception e) {
+            Log.e(TAG, "Error in VisualizerView.onPause: " + e.getMessage());
+        }
     }
     
     @Override
@@ -110,7 +118,12 @@ public class VisualizerView extends GLSurfaceView {
     @Override
     public void requestRender() {
         try {
-            super.requestRender();
+            // Check if we have a valid renderer before requesting a render
+            if (renderer != null) {
+                super.requestRender();
+            } else {
+                Log.d(TAG, "Skipping requestRender - renderer not set yet");
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error in requestRender", e);
         }

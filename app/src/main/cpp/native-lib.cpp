@@ -31,7 +31,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *
     // Enhanced settings for better visuals
     projectm_set_preset_duration(g_projectm, 30); // 30 seconds default preset duration
     projectm_set_soft_cut_duration(g_projectm, 7); // 7 seconds smooth transition
-    projectm_set_hard_cut_enabled(g_projectm, false); // Prefer smooth transitions
+    projectm_set_hard_cut_enabled(g_projectm, true); // Enable hard cuts for manual transitions
     projectm_set_beat_sensitivity(g_projectm, 1.0); // Default beat sensitivity
     
     LOGI("ProjectM instance created successfully with enhanced settings");
@@ -136,10 +136,10 @@ void select_random_preset(bool hard_cut) {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeNextPreset(JNIEnv *env, jclass clazz) {
+Java_com_example_projectm_visualizer_ProjectMJNI_nativeNextPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
     if (g_playlist) {
-        projectm_playlist_play_next(g_playlist, true);
-        LOGI("Selected next preset");
+        projectm_playlist_play_next(g_playlist, hard_cut);
+        LOGI("Selected next preset (hard_cut: %s)", hard_cut ? "true" : "false");
     } else {
         LOGE("Playlist is null in selectNextPreset");
     }
@@ -147,15 +147,16 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeNextPreset(JNIEnv *env, j
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativePreviousPreset(JNIEnv *env, jclass clazz) {
+Java_com_example_projectm_visualizer_ProjectMJNI_nativePreviousPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
     if (g_playlist) {
-        projectm_playlist_play_previous(g_playlist, true);
+        projectm_playlist_play_previous(g_playlist, hard_cut);
+        LOGI("Selected previous preset (hard_cut: %s)", hard_cut ? "true" : "false");
     }
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSelectRandomPreset(JNIEnv *env, jclass clazz) {
+Java_com_example_projectm_visualizer_ProjectMJNI_nativeSelectRandomPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
     // Initialize random seed if needed
     static bool seeded = false;
     if (!seeded) {
@@ -163,7 +164,8 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeSelectRandomPreset(JNIEnv
         seeded = true;
     }
     
-    select_random_preset(true);
+    select_random_preset(hard_cut);
+    LOGI("Selected random preset (hard_cut: %s)", hard_cut ? "true" : "false");
 }
 
 extern "C"

@@ -7,8 +7,8 @@ android {
         applicationId "com.example.projectm.visualizer"
         minSdkVersion 21
         targetSdkVersion 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "1.2"
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17"

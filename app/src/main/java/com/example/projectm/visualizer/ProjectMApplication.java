@@ -26,11 +26,15 @@ public class ProjectMApplication extends Application {
         Log.i(TAG, "Process ID: " + Process.myPid() + ", Thread: " + Thread.currentThread().getName());
         Log.i(TAG, "==========================================");
 
-        // Extract assets in a try-catch block to ensure we capture all errors
-        extractAssets();
-
         // Additional initialization logs
         logSystemInfo();
+        
+        // Extract assets in a background thread to prevent ANR
+        Thread extractionThread = new Thread(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            extractAssets();
+        }, "AssetExtractionThread");
+        extractionThread.start();
     }
     
     private void extractAssets() {

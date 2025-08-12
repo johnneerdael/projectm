@@ -53,9 +53,13 @@ public class ProjectMJNI {
     }
     
     public static void nextPreset() {
+        nextPreset(false); // Default to soft transition
+    }
+    
+    public static void nextPreset(boolean hardCut) {
         try {
-            Log.d(TAG, "Calling native nextPreset");
-            nativeNextPreset();
+            Log.d(TAG, "Calling native nextPreset (hardCut=" + hardCut + ")");
+            nativeNextPreset(hardCut);
             Log.d(TAG, "Native nextPreset completed successfully");
         } catch (Exception e) {
             Log.e(TAG, "Exception in nextPreset", e);
@@ -63,9 +67,13 @@ public class ProjectMJNI {
     }
     
     public static void previousPreset() {
+        previousPreset(false); // Default to soft transition
+    }
+    
+    public static void previousPreset(boolean hardCut) {
         try {
-            Log.d(TAG, "Calling native previousPreset");
-            nativePreviousPreset();
+            Log.d(TAG, "Calling native previousPreset (hardCut=" + hardCut + ")");
+            nativePreviousPreset(hardCut);
             Log.d(TAG, "Native previousPreset completed successfully");
         } catch (Exception e) {
             Log.e(TAG, "Exception in previousPreset", e);
@@ -73,9 +81,13 @@ public class ProjectMJNI {
     }
     
     public static void selectRandomPreset() {
+        selectRandomPreset(false); // Default to soft transition
+    }
+    
+    public static void selectRandomPreset(boolean hardCut) {
         try {
-            Log.d(TAG, "Calling native selectRandomPreset");
-            nativeSelectRandomPreset();
+            Log.d(TAG, "Calling native selectRandomPreset (hardCut=" + hardCut + ")");
+            nativeSelectRandomPreset(hardCut);
             Log.d(TAG, "Native selectRandomPreset completed successfully");
         } catch (Exception e) {
             Log.e(TAG, "Exception in selectRandomPreset", e);
@@ -144,18 +156,56 @@ public class ProjectMJNI {
         }
     }
     
+    // Set performance level (1=low, 2=normal, 3=high)
+    public static void setPerformanceLevel(int level) {
+        try {
+            Log.d(TAG, "Setting performance level: " + level);
+            // The actual native method may not exist, so we'll handle it gracefully
+            if (level < 1) level = 1;
+            if (level > 3) level = 3;
+            
+            // We'll implement a fallback if the native method doesn't exist
+            // by adjusting other parameters that can affect performance
+            
+            // For level 1 (low performance), reduce some quality settings
+            if (level == 1) {
+                // Reduce soft cut duration to minimize transition overhead
+                setSoftCutDuration(1);
+            }
+            // For level 2 (normal performance), use default settings
+            else if (level == 2) {
+                // Restore default soft cut duration
+                setSoftCutDuration(7);
+            }
+            
+            // Try to call native method if it exists
+            try {
+                nativeSetPerformanceLevel(level);
+            } catch (UnsatisfiedLinkError e) {
+                // Native method not implemented, using our fallbacks above
+                Log.d(TAG, "Native performance level setting not implemented, using fallback");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting performance level", e);
+        }
+    }
+    
     // Actual native method declarations
     private static native void nativeOnSurfaceCreated(int windowWidth, int windowHeight, String assetPath);
     private static native void nativeOnSurfaceChanged(int windowWidth, int windowHeight);
     private static native void nativeOnDrawFrame();
     private static native void nativeAddPCM(short[] pcmData, short nsamples);
-    private static native void nativeNextPreset();
-    private static native void nativePreviousPreset();
-    private static native void nativeSelectRandomPreset();
+    private static native void nativeNextPreset(boolean hardCut);
+    private static native void nativePreviousPreset(boolean hardCut);
+    private static native void nativeSelectRandomPreset(boolean hardCut);
     private static native String nativeGetCurrentPresetName();
     private static native void nativeSetPresetDuration(int seconds);
     private static native void nativeSetSoftCutDuration(int seconds);
     private static native void nativeDestroy();
     private static native String nativeGetVersion();
     private static native int nativeGetPresetCount();
+    
+    // This method might not be implemented in the native code yet,
+    // so we handle the UnsatisfiedLinkError gracefully
+    private static native void nativeSetPerformanceLevel(int level);
 }
