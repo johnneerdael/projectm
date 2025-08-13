@@ -38,8 +38,8 @@
 namespace libprojectM {
 
 // External framebuffer override support (allows embedding app to supply an FBO)
-static bool g_respect_external_framebuffer = false;
-static GLint g_external_incoming_framebuffer = 0; // captured each frame when enabled
+bool g_respect_external_framebuffer = false; // external linkage for use in other translation units
+GLint g_external_incoming_framebuffer = 0;    // captured each frame when enabled
 
 extern "C" void projectm_set_respect_external_framebuffer(int enable) {
     g_respect_external_framebuffer = (enable != 0);

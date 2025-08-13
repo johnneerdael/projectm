@@ -76,11 +76,9 @@ void Framebuffer::BindDraw(int framebufferIndex)
 void Framebuffer::Unbind()
 {
     // If the host application wants to keep its FBO bound, defer unbinding.
-    extern bool g_respect_external_framebuffer; // from ProjectM.cpp
-    extern GLint g_external_incoming_framebuffer;
-    if (g_respect_external_framebuffer) {
-        if (g_external_incoming_framebuffer != 0) {
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)g_external_incoming_framebuffer);
+    if (::libprojectM::g_respect_external_framebuffer) {
+        if (::libprojectM::g_external_incoming_framebuffer != 0) {
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)::libprojectM::g_external_incoming_framebuffer);
             return;
         }
     }

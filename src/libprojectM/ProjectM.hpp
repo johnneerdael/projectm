@@ -292,3 +292,9 @@ private:
 
 // C-style exported API for external framebuffer control
 extern "C" PROJECTM_EXPORT void projectm_set_respect_external_framebuffer(int enable);
+
+// Expose framebuffer override globals for internal renderer components
+namespace libprojectM {
+    extern bool g_respect_external_framebuffer;
+    extern int g_external_incoming_framebuffer; // GLint but forward declare as int to avoid GL header leakage
+}
