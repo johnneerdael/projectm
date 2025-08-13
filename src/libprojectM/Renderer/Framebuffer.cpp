@@ -1,4 +1,5 @@
 #include "Framebuffer.hpp"
+#include "../ProjectM.hpp" // for external framebuffer override globals
 
 namespace libprojectM {
 namespace Renderer {
