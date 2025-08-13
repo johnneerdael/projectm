@@ -201,8 +201,9 @@ public class MainActivity extends Activity {
                         // Initialize UI after renderer is set up
                         initUI();
                         
-                        // Start FPS monitoring for auto-resolution adjustment
-                        initAutoResolutionAdjustment();
+                        // With device-tier based performance optimization, we no longer need auto-resolution switching
+                        // The fixed resolution per device tier provides optimal performance
+                        Log.d(TAG, "Device-tier performance optimization active - auto-resolution disabled");
                         
                     } catch (Exception e) {
                         Log.e(TAG, "Error creating renderer", e);
@@ -432,8 +433,9 @@ public class MainActivity extends Activity {
                 // Load preferences
                 android.content.SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
                 
-                // Restore auto-change setting (we'll set the switch later in code)
-                boolean autoChangeEnabled = prefs.getBoolean(PREF_AUTO_CHANGE, false);
+                // Disable auto-change by default since we use device-tier based optimization
+                boolean autoChangeEnabled = false;
+                Log.d(TAG, "Auto-change disabled in favor of device-tier optimization");
                 
                 // Restore preset duration
                 int presetDuration = prefs.getInt(PREF_PRESET_DURATION, 30); // Default 30 seconds
@@ -503,9 +505,10 @@ public class MainActivity extends Activity {
                         resetAutoHideTimer();
                     });
                     
-                    // Restore previous resolution setting or default to 720p
-                    int savedResolution = prefs.getInt(PREF_RESOLUTION, RESOLUTION_720P);
-                    Log.d(TAG, "Restoring saved resolution: " + savedResolution);
+                    // Get device-appropriate default resolution for new installations
+                    int defaultResolution = getDefaultResolutionForDevice();
+                    int savedResolution = prefs.getInt(PREF_RESOLUTION, defaultResolution);
+                    Log.d(TAG, "Device default resolution: " + defaultResolution + ", restored saved resolution: " + savedResolution);
                     
                     // Set the radio button based on saved preference
                     int radioButtonId;
@@ -1144,7 +1147,7 @@ public class MainActivity extends Activity {
         try {
             // Get saved resolution preference
             android.content.SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
-            int savedResolution = prefs.getInt(PREF_RESOLUTION, RESOLUTION_720P);
+            int savedResolution = prefs.getInt(PREF_RESOLUTION, getDefaultResolutionForDevice());
             
             // Apply the resolution to the renderer
             int width = 1280;
@@ -1224,7 +1227,7 @@ public class MainActivity extends Activity {
                     
                     // Get current resolution settings
                     android.content.SharedPreferences prefs = getSharedPreferences(PREF_NAME, MODE_PRIVATE);
-                    int currentResolution = prefs.getInt(PREF_RESOLUTION, RESOLUTION_720P);
+                    int currentResolution = prefs.getInt(PREF_RESOLUTION, getDefaultResolutionForDevice());
                     
                     // Lower resolution if possible
                     int newResolution = currentResolution;
@@ -1351,5 +1354,35 @@ public class MainActivity extends Activity {
         }
         
         super.onDestroy();
+    }
+    
+    /**
+     * Get the optimal default resolution based on device performance tier
+     * This replaces the auto-switching system with fixed defaults per device capability
+     */
+    private int getDefaultResolutionForDevice() {
+        if (renderer == null) {
+            Log.w(TAG, "Renderer not available, defaulting to 720p");
+            return RESOLUTION_720P;
+        }
+        
+        // Get device performance from renderer
+        VisualizerRenderer.DevicePerformance performance = renderer.getDevicePerformance();
+        
+        switch (performance) {
+            case LOW:
+                Log.i(TAG, "LOW-END device detected - defaulting to 480p");
+                return RESOLUTION_480P;
+            case MEDIUM:
+                Log.i(TAG, "MID-RANGE device detected - defaulting to 720p");
+                return RESOLUTION_720P;
+            case HIGH:
+            case PREMIUM:
+                Log.i(TAG, "HIGH-END device detected - defaulting to 1080p");
+                return RESOLUTION_1080P;
+            default:
+                Log.w(TAG, "Unknown device performance - defaulting to 720p");
+                return RESOLUTION_720P;
+        }
     }
 }

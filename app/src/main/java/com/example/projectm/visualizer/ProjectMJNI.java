@@ -13,7 +13,29 @@ public class ProjectMJNI {
             Log.e(TAG, "Failed to load projectmtv library", e);
         }
     }
+
+    // Native method declarations
+    private static native void nativeOnSurfaceCreated(int windowWidth, int windowHeight, String assetPath);
+    private static native void nativeOnSurfaceChanged(int windowWidth, int windowHeight);
+    private static native void nativeOnDrawFrame();
+    private static native void nativeAddPCM(short[] pcmData, short nsamples);
+    private static native void nativeNextPreset(boolean hardCut);
+    private static native void nativePreviousPreset(boolean hardCut);
+    private static native void nativeSelectRandomPreset(boolean hardCut);
+    private static native String nativeGetCurrentPresetName();
+    private static native void nativeSetPresetDuration(int seconds);
+    private static native void nativeSetSoftCutDuration(int seconds);
+    private static native void nativeDestroy();
+    private static native String nativeGetVersion();
+    private static native int nativeGetPresetCount();
     
+    // Performance optimization methods
+    private static native void nativeSetPerformanceLevel(int level);
+    private static native void nativeSetViewport(int x, int y, int width, int height);
+    private static native void nativeOptimizeForPerformance(int performanceLevel);
+    private static native int nativeGetDeviceTier();
+    private static native void nativeTrimMemory();
+
     // Wrapped native method calls with logging
     public static void onSurfaceCreated(int windowWidth, int windowHeight, String assetPath) {
         try {
@@ -126,6 +148,11 @@ public class ProjectMJNI {
         }
     }
     
+    // Simple getter - we don't have a native method for this, so return a reasonable default
+    public static int getSoftCutDuration() {
+        return 7; // Default soft cut duration
+    }
+    
     public static void destroy() {
         try {
             Log.d(TAG, "Calling native destroy");
@@ -190,6 +217,50 @@ public class ProjectMJNI {
         }
     }
     
+    // Enhanced performance optimization using native capabilities
+    public static void optimizeForPerformance(int performanceLevel) {
+        try {
+            Log.d(TAG, "Optimizing for performance level: " + performanceLevel);
+            nativeOptimizeForPerformance(performanceLevel);
+            Log.d(TAG, "Native performance optimization completed");
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "Native performance optimization not available, using fallback");
+            setPerformanceLevel(performanceLevel); // Fallback to existing method
+        } catch (Exception e) {
+            Log.e(TAG, "Error in performance optimization", e);
+        }
+    }
+    
+    // Get device tier from native layer
+    public static int getDeviceTier() {
+        try {
+            int tier = nativeGetDeviceTier();
+            Log.d(TAG, "Native device tier: " + tier);
+            return tier;
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "Native device tier detection not available, returning default");
+            return 1; // Default to MID_RANGE
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting device tier", e);
+            return 1;
+        }
+    }
+    
+    // Memory management
+    public static void trimMemory() {
+        try {
+            Log.d(TAG, "Requesting native memory trim");
+            nativeTrimMemory();
+            Log.d(TAG, "Native memory trim completed");
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "Native memory trimming not available");
+            // Could trigger Java GC here as fallback
+            System.gc();
+        } catch (Exception e) {
+            Log.e(TAG, "Error in memory trimming", e);
+        }
+    }
+    
     // Set GL viewport for correct scaling regardless of render resolution
     public static void setViewport(int x, int y, int width, int height) {
         try {
@@ -206,24 +277,4 @@ public class ProjectMJNI {
             Log.e(TAG, "Error setting viewport", e);
         }
     }
-    
-    // Actual native method declarations
-    private static native void nativeOnSurfaceCreated(int windowWidth, int windowHeight, String assetPath);
-    private static native void nativeOnSurfaceChanged(int windowWidth, int windowHeight);
-    private static native void nativeOnDrawFrame();
-    private static native void nativeAddPCM(short[] pcmData, short nsamples);
-    private static native void nativeNextPreset(boolean hardCut);
-    private static native void nativePreviousPreset(boolean hardCut);
-    private static native void nativeSelectRandomPreset(boolean hardCut);
-    private static native String nativeGetCurrentPresetName();
-    private static native void nativeSetPresetDuration(int seconds);
-    private static native void nativeSetSoftCutDuration(int seconds);
-    private static native void nativeDestroy();
-    private static native String nativeGetVersion();
-    private static native int nativeGetPresetCount();
-    
-    // These methods might not be implemented in the native code yet,
-    // so we handle the UnsatisfiedLinkError gracefully
-    private static native void nativeSetPerformanceLevel(int level);
-    private static native void nativeSetViewport(int x, int y, int width, int height);
 }

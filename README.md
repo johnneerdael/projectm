@@ -1,4 +1,4 @@
-# projectM Visualizer for Android TV (v1.3)
+# projectM Visualizer for Android TV (v1.6)
 
 A music visualization powerhouse for your Android TV, bringing the legendary ProjectM (an open-source reimplementation of Milkdrop) to your living room with the complete Cream of the Crop preset collection and advanced transition controls.
 

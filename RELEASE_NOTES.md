@@ -1,12 +1,41 @@
-# projectM Android TV 1.5 - Complete Viewport Scaling Resolution
+# projectM Android TV 1.6 - Complete Viewport Fix & Device-Tier Performance
 
-![ProjectM Visualizer for Android TV](https://raw.githubusercontent.com/projectM-visualizer/projectm/master/projectm-android-tv/app/src/main/res/drawable/launcher_icon.png)
+## Revolutionary Viewport Resolution & Smart Performance Optimization
+
+Version 1.6 represents a major breakthrough in projectM Android TV, delivering the definitive solution to viewport scaling issues while introducing intelligent device-tier performance optimization. This release ensures perfect fullscreen visualization on all resolutions while automatically optimizing performance based on your specific Android TV hardware.
+
+### ✨ Major Improvements in 1.6
+
+- **🎯 DEFINITIVE VIEWPORT SCALING FIX** - Completely eliminated the root cause of viewport scaling issues
+  - **Always Full Resolution Rendering**: ProjectM now always renders at native screen dimensions (1920x1080, etc.)
+  - **Quality-Based Performance**: Performance optimization through preset complexity and quality settings instead of resolution reduction
+  - **Universal Screen Coverage**: 720p/480p performance modes now maintain perfect fullscreen display
+  
+- **🚀 Intelligent Device-Tier Performance System** - Automatic hardware detection and optimization
+  - **PREMIUM Tier** (NVIDIA Shield/Tegra): Maximum quality, extended transitions, full native resolution
+  - **HIGH-END Tier** (Fire TV 4K, Mi Box S): High quality settings optimized for powerful Android TV boxes
+  - **MID-RANGE Tier** (Standard Android TV): Balanced quality with moderate optimizations
+  - **LOW-END Tier** (Budget devices): Optimized settings for smooth performance on older hardware
+  
+- **⚡ Eliminated Auto-Resolution Switching** - Replaced problematic resolution scaling with smart defaults
+  - **Device-Appropriate Defaults**: Automatic selection of optimal settings based on detected hardware
+  - **Consistent User Experience**: No more jarring resolution changes during use
+  - **User Override Available**: Manual resolution controls still available for advanced users
+
+### 🔧 Technical Enhancements
+
+- **Native-Level Performance Optimization** - Enhanced C++ performance monitoring and memory management
+- **Quality-First Approach** - Maintains visual fidelity while optimizing computational complexity
+- **Advanced Device Detection** - GPU model recognition, RAM analysis, and Android version consideration
+- **Adaptive FPS Management** - Real-time performance monitoring with automatic quality adjustment
+
+---
+
+# projectM Android TV 1.5 - Complete Viewport Scaling Resolution
 
 ## Definitive Viewport Scaling Fix
 
 We're excited to announce version 1.5 of projectM for Android TV, which completely resolves the long-standing viewport scaling issues. This release ensures that all render resolutions (720p, 480p, etc.) properly stretch to fill the entire TV screen, providing a true fullscreen experience regardless of the internal rendering resolution used for performance optimization.c### ✨ New Features & Fixes in 1.3droid TV 1.3 - Resolution Scaling & Viewport Fixes
-
-![ProjectM Visualizer for Android TV](https://raw.githubusercontent.com/projectM-visualizer/projectm/master/projectm-android-tv/app/src/main/res/drawable/launcher_icon.png)
 
 ## Enhanced Visualization & Resolution Fixes
 

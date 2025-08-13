@@ -3,6 +3,7 @@ package com.example.projectm.visualizer;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
+import android.os.Build;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -17,10 +18,20 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
     private long PRESET_CHANGE_INTERVAL = 30000; // 30 seconds default
     private boolean autoChangeEnabled = true; // Auto change presets by default
     private boolean startupMode = false; // Special mode for faster app startup
+    
+    // Device performance detection
+    public enum DevicePerformance { LOW, MEDIUM, HIGH, PREMIUM }
+    private DevicePerformance devicePerformance;
+    private int maxTextureSize = 0;
+    private String gpuRenderer = "";
+    private boolean isHighEndDevice = false;
 
     public VisualizerRenderer(String assetPath) {
         Log.d(TAG, "VisualizerRenderer created with asset path: " + assetPath);
         mAssetPath = assetPath;
+        
+        // Detect device performance capabilities
+        detectDevicePerformance();
         
         // Use default width and height if not set yet
         if (mWidth <= 0 || mHeight <= 0) {
@@ -29,12 +40,75 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
             Log.d(TAG, "Using default dimensions: " + mWidth + "x" + mHeight);
         }
     }
+    
+    private void detectDevicePerformance() {
+        // Detect high-end devices by model
+        String model = Build.MODEL.toLowerCase();
+        String manufacturer = Build.MANUFACTURER.toLowerCase();
+        
+        // NVIDIA Shield and other premium devices
+        if (model.contains("shield") || model.contains("tegra")) {
+            devicePerformance = DevicePerformance.PREMIUM;
+            isHighEndDevice = true;
+            Log.i(TAG, "Detected PREMIUM device (NVIDIA Shield/Tegra): " + Build.MODEL);
+        }
+        // Other high-end Android TV devices
+        else if (model.contains("chromecast") && model.contains("ultra") ||
+                 model.contains("mi box s") ||
+                 model.contains("fire tv stick 4k")) {
+            devicePerformance = DevicePerformance.HIGH;
+            isHighEndDevice = true;
+            Log.i(TAG, "Detected HIGH-END device: " + Build.MODEL);
+        }
+        // Medium performance devices
+        else if (Build.VERSION.SDK_INT >= 28 && // Android 9+
+                Runtime.getRuntime().maxMemory() > 1024 * 1024 * 1024) { // > 1GB RAM
+            devicePerformance = DevicePerformance.MEDIUM;
+            Log.i(TAG, "Detected MEDIUM performance device: " + Build.MODEL);
+        }
+        // Low-end devices
+        else {
+            devicePerformance = DevicePerformance.LOW;
+            Log.i(TAG, "Detected LOW-END device: " + Build.MODEL);
+        }
+        
+        Log.i(TAG, "Device Performance Level: " + devicePerformance + 
+              ", RAM: " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + "MB" +
+              ", Android API: " + Build.VERSION.SDK_INT);
+    }
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         Log.d(TAG, "onSurfaceCreated called, GL version: " + gl.glGetString(GL10.GL_VERSION));
         Log.d(TAG, "GL Vendor: " + gl.glGetString(GL10.GL_VENDOR));
-        Log.d(TAG, "GL Renderer: " + gl.glGetString(GL10.GL_RENDERER));
+        
+        // Detect GPU capabilities
+        gpuRenderer = gl.glGetString(GL10.GL_RENDERER);
+        Log.d(TAG, "GL Renderer: " + gpuRenderer);
+        
+        // Get maximum texture size for performance optimization
+        int[] maxTexSize = new int[1];
+        GLES20.glGetIntegerv(GLES20.GL_MAX_TEXTURE_SIZE, maxTexSize, 0);
+        maxTextureSize = maxTexSize[0];
+        Log.i(TAG, "Max texture size: " + maxTextureSize);
+        
+        // Enhanced GPU detection for better performance classification
+        String renderer = gpuRenderer.toLowerCase();
+        if (renderer.contains("tegra") || renderer.contains("shield")) {
+            devicePerformance = DevicePerformance.PREMIUM;
+            isHighEndDevice = true;
+        } else if (renderer.contains("adreno 640") || renderer.contains("adreno 650") || 
+                   renderer.contains("mali-g76") || renderer.contains("mali-g77") ||
+                   renderer.contains("powervr") && renderer.contains("ge8320")) {
+            devicePerformance = DevicePerformance.HIGH;
+            isHighEndDevice = true;
+        } else if (maxTextureSize >= 4096) {
+            if (devicePerformance == DevicePerformance.LOW) {
+                devicePerformance = DevicePerformance.MEDIUM;
+            }
+        }
+        
+        Log.i(TAG, "Final device performance classification: " + devicePerformance);
         Log.d(TAG, "Current dimensions: " + mWidth + "x" + mHeight);
         Log.d(TAG, "Asset path: " + (mAssetPath != null ? mAssetPath : "null"));
 
@@ -55,6 +129,9 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                 mProjectMInitialized = true;
                 lastPresetChange = System.currentTimeMillis();
                 Log.i(TAG, "ProjectM initialized successfully");
+                
+                // Apply performance-based optimizations immediately after initialization
+                applyPerformanceOptimizations();
                 
                 // CRITICAL: Set viewport immediately after ProjectM initialization
                 // This ensures we capture the full display dimensions for viewport scaling
@@ -80,7 +157,57 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
         }
     }
 
-    // Performance tracking
+    private void applyPerformanceOptimizations() {
+        if (!mProjectMInitialized) return;
+        
+        try {
+            switch (devicePerformance) {
+                case PREMIUM: // NVIDIA Shield, high-end devices
+                    Log.i(TAG, "Applying PREMIUM performance settings");
+                    // Use high quality settings, longer transitions for smooth experience
+                    ProjectMJNI.setPresetDuration(35); // Slightly longer for premium experience
+                    ProjectMJNI.setSoftCutDuration(10); // Longer transitions look better on premium devices
+                    // Use native optimization for enhanced performance
+                    ProjectMJNI.optimizeForPerformance(2); // High performance level
+                    Log.i(TAG, "Premium device: full quality at native resolution");
+                    break;
+                    
+                case HIGH: // High-end devices like recent Shield, Mi Box S
+                    Log.i(TAG, "Applying HIGH-END performance settings");
+                    ProjectMJNI.setPresetDuration(30); // Longer duration for high quality
+                    ProjectMJNI.setSoftCutDuration(7); // Smooth transitions
+                    // High-end devices can handle full quality at full resolution
+                    ProjectMJNI.optimizeForPerformance(2); // High performance level
+                    Log.i(TAG, "High-end device: full quality at native resolution");
+                    break;
+                    
+                case MEDIUM: // Mid-range Android TV devices
+                    Log.i(TAG, "Applying MID-RANGE performance settings");
+                    ProjectMJNI.setPresetDuration(25); // Standard duration
+                    ProjectMJNI.setSoftCutDuration(5); // Standard transitions
+                    // Moderate performance optimization while keeping full resolution
+                    ProjectMJNI.optimizeForPerformance(1); // Medium performance level
+                    Log.i(TAG, "Mid-range device: balanced quality at native resolution");
+                    break;
+                    
+                case LOW: // Low-end devices, older Android TV boxes
+                    Log.i(TAG, "Applying LOW-END performance settings");
+                    ProjectMJNI.setPresetDuration(20); // Shorter duration to avoid complex presets
+                    ProjectMJNI.setSoftCutDuration(3); // Quick transitions to save performance
+                    // Aggressive performance optimization but still full resolution
+                    ProjectMJNI.optimizeForPerformance(0); // Low performance level
+                    lowPerformanceMode = true; // Enable additional performance monitoring
+                    Log.i(TAG, "Low-end device: optimized quality settings at native resolution");
+                    break;
+            }
+            
+            // Performance optimizations are now handled through quality settings
+            // rather than render resolution, ensuring full-screen coverage
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error applying performance optimizations", e);
+        }
+    }
     private long lastFpsCheck = 0;
     private int frameCount = 0;
     private static final int FPS_UPDATE_INTERVAL = 2000; // 2 seconds
@@ -114,73 +241,7 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                     Log.v(TAG, "Set viewport via GLES20 before render: " + mWidth + "x" + mHeight);
                 }
                 
-                // Track performance
-                frameCount++;
-                long now = System.currentTimeMillis();
-                
-                // Calculate FPS every 2 seconds
-                if (now - lastFpsCheck > FPS_UPDATE_INTERVAL) {
-                    currentFps = (float) frameCount * 1000 / (now - lastFpsCheck);
-                    Log.d(TAG, "Rendering at " + currentFps + " FPS");
-                    
-                    // If FPS is too low, switch to low performance mode
-                    // Adjust thresholds based on resolution
-                    float lowThreshold = 24;
-                    float highThreshold = 28;
-                    
-                    // Lower thresholds for higher resolutions
-                    if (customRenderWidth >= 1920 || customRenderHeight >= 1080) {
-                        // For 1080p and 4K, be more lenient with frame rates
-                        lowThreshold = 20;
-                        highThreshold = 24;
-                    } else if (customRenderWidth >= 1280 || customRenderHeight >= 720) {
-                        // For 720p, use standard thresholds
-                        lowThreshold = 24;
-                        highThreshold = 28;
-                    }
-                    
-                    if (currentFps < lowThreshold && !lowPerformanceMode) {
-                        Log.w(TAG, "Low frame rate detected (" + currentFps + " < " + lowThreshold + "), activating low performance mode");
-                        lowPerformanceMode = true;
-                        
-                        // Try to simplify current preset for better performance
-                        try {
-                            ProjectMJNI.setPerformanceLevel(1); // 1=Low performance mode
-                            Log.d(TAG, "Set native performance level to LOW");
-                        } catch (Exception e) {
-                            Log.e(TAG, "Could not set performance level", e);
-                        }
-                        
-                        // If in 4K or 1080p and performance is very poor, automatically lower resolution
-                        if (currentFps < 15) {
-                            if (customRenderWidth >= 3840 || customRenderHeight >= 2160) {
-                                // Drop from 4K to 1080p
-                                Log.w(TAG, "Very poor performance at 4K resolution. Automatically reducing to 1080p.");
-                                setRenderResolution(1920, 1080);
-                            } else if (currentFps < 10 && (customRenderWidth >= 1920 || customRenderHeight >= 1080)) {
-                                // Drop from 1080p to 720p
-                                Log.w(TAG, "Very poor performance at 1080p resolution. Automatically reducing to 720p.");
-                                setRenderResolution(1280, 720);
-                            }
-                        }
-                    } else if (currentFps > highThreshold && lowPerformanceMode) {
-                        Log.d(TAG, "Performance improved (" + currentFps + " > " + highThreshold + "), deactivating low performance mode");
-                        lowPerformanceMode = false;
-                        
-                        // Restore full quality settings
-                        try {
-                            ProjectMJNI.setPerformanceLevel(2); // 2=Normal performance mode
-                            Log.d(TAG, "Set native performance level to NORMAL");
-                        } catch (Exception e) {
-                            Log.e(TAG, "Could not set performance level", e);
-                        }
-                    }
-                    
-                    lastFpsCheck = now;
-                    frameCount = 0;
-                }
-                
-                // Render the frame
+                // Render the ProjectM visualization
                 ProjectMJNI.onDrawFrame();
                 
                 // CRITICAL: Set viewport again AFTER ProjectM rendering
@@ -203,14 +264,86 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                     
                     // Force it again
                     GLES20.glViewport(0, 0, mWidth, mHeight);
-                    Log.w(TAG, "Forced viewport correction to: " + mWidth + "x" + mHeight);
                 } else {
-                    Log.v(TAG, "Viewport verified correct: " + finalViewport[2] + "x" + finalViewport[3]);
+                    Log.v(TAG, "Viewport correctly set to: " + finalViewport[2] + "x" + finalViewport[3]);
                 }
                 
-                // Auto-change presets if enabled
+                // Enhanced performance tracking with device-aware thresholds
+                frameCount++;
+                long now = System.currentTimeMillis();
+                
+                // Check for automatic preset changes
                 if (autoChangeEnabled) {
                     if (now - lastPresetChange > PRESET_CHANGE_INTERVAL) {
+                        randomPreset(lowPerformanceMode); // Use hardcut in low performance mode
+                        lastPresetChange = now;
+                        Log.d(TAG, "Auto-changing preset " + (lowPerformanceMode ? "with hardcut" : "with regular transition"));
+                    }
+                }
+                
+                // Calculate FPS every 2 seconds
+                if (now - lastFpsCheck > FPS_UPDATE_INTERVAL) {
+                    currentFps = (float) frameCount * 1000 / (now - lastFpsCheck);
+                    Log.d(TAG, "Rendering at " + currentFps + " FPS on " + devicePerformance + " device");
+                    
+                    // Adaptive FPS thresholds based on device performance
+                    float lowThreshold, highThreshold, targetFps;
+                    
+                    switch (devicePerformance) {
+                        case PREMIUM:
+                            targetFps = 60;
+                            lowThreshold = 50;  // NVIDIA Shield should maintain high FPS
+                            highThreshold = 55;
+                            break;
+                        case HIGH:
+                            targetFps = 45;
+                            lowThreshold = 35;
+                            highThreshold = 40;
+                            break;
+                        case MEDIUM:
+                            targetFps = 30;
+                            lowThreshold = 25;
+                            highThreshold = 28;
+                            break;
+                        case LOW:
+                        default:
+                            targetFps = 24;
+                            lowThreshold = 18;
+                            highThreshold = 22;
+                            break;
+                    }
+                    
+                    // Further adjust thresholds based on current resolution
+                    if (customRenderWidth >= 1920 || customRenderHeight >= 1080) {
+                        lowThreshold *= 0.8f;  // Be more lenient with high resolutions
+                        highThreshold *= 0.8f;
+                    }
+                    
+                    // Performance management logic
+                    if (currentFps < lowThreshold && !lowPerformanceMode) {
+                        Log.w(TAG, "Low frame rate detected (" + currentFps + " < " + lowThreshold + 
+                              ") on " + devicePerformance + " device, activating performance mode");
+                        lowPerformanceMode = true;
+                        
+                        // Apply performance optimizations
+                        optimizeForPerformance();
+                        
+                    } else if (currentFps > highThreshold && lowPerformanceMode) {
+                        Log.d(TAG, "Performance improved (" + currentFps + " > " + highThreshold + 
+                              ") on " + devicePerformance + " device, restoring quality");
+                        lowPerformanceMode = false;
+                        
+                        // Restore quality settings
+                        restoreQualitySettings();
+                    }
+                    
+                    lastFpsCheck = now;
+                    frameCount = 0;
+                }
+                
+                // Check for automatic preset changes
+                if (autoChangeEnabled) {
+                    if (System.currentTimeMillis() - lastPresetChange > PRESET_CHANGE_INTERVAL) {
                         // If in low performance mode, try to switch to a simpler preset
                         if (lowPerformanceMode) {
                             // Use hardcut in low performance mode to avoid the heavy transition
@@ -221,12 +354,111 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                             randomPreset(false);
                             Log.d(TAG, "Auto-changing preset with regular transition");
                         }
-                        lastPresetChange = now;
+                        lastPresetChange = System.currentTimeMillis();
                     }
                 }
             }
         } catch (Exception e) {
             Log.e(TAG, "Error in onDrawFrame", e);
+        }
+    }
+
+    private void optimizeForPerformance() {
+        try {
+            // Use native performance optimization for enhanced control
+            ProjectMJNI.optimizeForPerformance(0); // Low performance level for degradation
+            
+            // Set low performance mode in native code (fallback)
+            ProjectMJNI.setPerformanceLevel(1);
+            
+            // Reduce transition duration to minimize heavy transition effects
+            ProjectMJNI.setSoftCutDuration(2); // Use quick transitions during performance issues
+            
+            // Trigger native memory trimming for low-end devices
+            ProjectMJNI.trimMemory();
+            
+            // Automatically reduce resolution based on device capability and current performance
+            if (currentFps < 15) { // Very poor performance
+                if (customRenderWidth >= 1920 || customRenderHeight >= 1080) {
+                    Log.w(TAG, "Critical performance: dropping to 720p");
+                    setRenderResolution(1280, 720);
+                } else if (customRenderWidth >= 1280 || customRenderHeight >= 720) {
+                    Log.w(TAG, "Critical performance: dropping to 480p");
+                    setRenderResolution(854, 480);
+                }
+            } else if (currentFps < 20) { // Poor performance
+                if (customRenderWidth >= 3840 || customRenderHeight >= 2160) {
+                    Log.w(TAG, "Poor performance: dropping from 4K to 1080p");
+                    setRenderResolution(1920, 1080);
+                } else if (customRenderWidth >= 1920 || customRenderHeight >= 1080) {
+                    Log.w(TAG, "Poor performance: dropping from 1080p to 720p");
+                    setRenderResolution(1280, 720);
+                }
+            }
+            
+            Log.i(TAG, "Applied performance optimizations with native enhancement for " + devicePerformance + " device");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error optimizing for performance", e);
+        }
+    }
+    
+    private void restoreQualitySettings() {
+        try {
+            // Use native performance optimization to restore quality
+            switch (devicePerformance) {
+                case PREMIUM:
+                case HIGH:
+                    ProjectMJNI.optimizeForPerformance(2); // High performance level
+                    break;
+                case MEDIUM:
+                    ProjectMJNI.optimizeForPerformance(1); // Medium performance level
+                    break;
+                case LOW:
+                default:
+                    ProjectMJNI.optimizeForPerformance(0); // Low performance level (but not degraded)
+                    break;
+            }
+            
+            // Restore normal performance mode (fallback)
+            ProjectMJNI.setPerformanceLevel(2);
+            
+            // Restore original transition duration based on device performance
+            switch (devicePerformance) {
+                case PREMIUM:
+                    ProjectMJNI.setSoftCutDuration(10);
+                    break;
+                case HIGH:
+                    ProjectMJNI.setSoftCutDuration(7);
+                    break;
+                case MEDIUM:
+                    ProjectMJNI.setSoftCutDuration(5);
+                    break;
+                case LOW:
+                default:
+                    ProjectMJNI.setSoftCutDuration(3);
+                    break;
+            }
+            
+            Log.i(TAG, "Restored quality settings with native optimization for " + devicePerformance + " device");
+            
+            // Optionally restore higher resolution if performance allows
+            // But be conservative - don't immediately jump to highest resolution
+            if (devicePerformance == DevicePerformance.PREMIUM && currentFps > 45) {
+                // Premium devices can handle full resolution when performing well
+                if (mWidth > customRenderWidth || mHeight > customRenderHeight) {
+                    Log.i(TAG, "Premium device performing well - considering resolution upgrade");
+                    // Don't immediately jump to full 4K, step up gradually
+                    if (customRenderWidth < 1920) {
+                        setRenderResolution(1920, 1080);
+                    }
+                }
+            }
+            
+            Log.i(TAG, "Restored quality settings for " + devicePerformance + " device");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error restoring quality settings", e);
         }
     }
 
@@ -250,13 +482,13 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
             Log.d(TAG, "Set viewport via GLES20 to full screen: " + mWidth + "x" + mHeight);
         }
         
-        // If custom resolution is set, use it instead of actual surface dimensions for rendering
-        int renderWidth = (customRenderWidth > 0) ? customRenderWidth : width;
-        int renderHeight = (customRenderHeight > 0) ? customRenderHeight : height;
+        // CRITICAL FIX for viewport scaling issue:
+        // Always pass FULL screen dimensions to ProjectM, regardless of performance settings
+        // This ensures presets always fill the entire screen (720p/480p scaling issue fix)
+        int renderWidth = width;   // Always use actual screen width
+        int renderHeight = height; // Always use actual screen height
         
-        if (customRenderWidth > 0 || customRenderHeight > 0) {
-            Log.d(TAG, "Using custom render dimensions: " + renderWidth + "x" + renderHeight);
-        }
+        Log.i(TAG, "Using FULL screen dimensions for ProjectM: " + renderWidth + "x" + renderHeight);
         
         // Clear the screen to avoid artifacts when changing resolution
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -577,5 +809,12 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                 }
             }
         }
+    }
+    
+    /**
+     * Get the detected device performance tier
+     */
+    public DevicePerformance getDevicePerformance() {
+        return devicePerformance;
     }
 }

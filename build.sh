@@ -13,6 +13,9 @@ fi
 # Export the environment variable
 export JAVA_HOME
 
+# Change to the script's directory to ensure gradlew can be found
+cd "$(dirname "$0")"
+
 # Run Gradle with the specified command or default to "assembleDebug"
 if [ $# -eq 0 ]; then
     echo "Running default task: assembleDebug"
