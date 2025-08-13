@@ -12,6 +12,10 @@
 projectm_handle g_projectm = nullptr;
 projectm_playlist_handle g_playlist = nullptr;
 
+// Store display dimensions separately from render dimensions
+static int g_display_width = 0;
+static int g_display_height = 0;
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *env, jclass clazz, jint width, jint height, jstring preset_path) {
@@ -70,10 +74,18 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceChanged(JNIEnv *env, jclass clazz,
                                                                         jint width, jint height) {
-    LOGI("Surface changed to %dx%d", width, height);
+    LOGI("Surface changed - render size: %dx%d, display size: %dx%d", width, height, g_display_width, g_display_height);
     if (g_projectm) {
+        // Set ProjectM internal rendering resolution
         projectm_set_window_size(g_projectm, width, height);
-        LOGI("Window size set successfully");
+        LOGI("ProjectM window size set to %dx%d", width, height);
+        
+        // Immediately restore viewport to full display size
+        // This prevents ProjectM from shrinking the viewport to match render size
+        if (g_display_width > 0 && g_display_height > 0) {
+            glViewport(0, 0, g_display_width, g_display_height);
+            LOGI("Restored viewport to full display: %dx%d", g_display_width, g_display_height);
+        }
     } else {
         LOGE("ProjectM instance is null in surfaceChanged");
     }
@@ -84,6 +96,13 @@ JNIEXPORT void JNICALL
 Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnDrawFrame(JNIEnv *env, jclass clazz) {
     if (g_projectm) {
         projectm_opengl_render_frame(g_projectm);
+        
+        // Immediately restore viewport to full display size after ProjectM renders
+        // ProjectM might change the viewport during rendering, so we reset it
+        if (g_display_width > 0 && g_display_height > 0) {
+            glViewport(0, 0, g_display_width, g_display_height);
+            LOGI("Restored viewport after ProjectM render to %dx%d", g_display_width, g_display_height);
+        }
     }
 }
 
@@ -247,7 +266,11 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetViewport(JNIEnv *env, jclass clazz, 
                                                                   jint x, jint y, jint width, jint height) {
+    // Store display dimensions for later use
+    g_display_width = width;
+    g_display_height = height;
+    
     // Set OpenGL viewport directly - this ensures the visualization is stretched to fit the full screen
     glViewport(x, y, width, height);
-    LOGI("Native setViewport called: %d,%d %dx%d", x, y, width, height);
+    LOGI("Native setViewport called and stored: %d,%d %dx%d", x, y, width, height);
 }

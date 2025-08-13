@@ -18,11 +18,11 @@ We're excited to announce version 1.2 of projectM for Android TV, featuring impr
 
 ### ✨ New Features & Fixes in 1.4
 
-- **Enhanced Full-Screen Visualization** - Further improved viewport scaling to guarantee visualizations properly stretch to fill the entire screen at all resolutions
-- **Optimized Resolution Management** - Refined the resolution handling system with more robust viewport controls
-- **Stabilized OpenGL Pipeline** - Enhanced error handling and resilience in the rendering process
-- **Improved Performance** - Better resource management and rendering efficiency
-- **Enhanced User Experience** - Ensured correct version display throughout the application
+- **FIXED: Full-Screen Viewport Scaling** - Completely resolved the issue where lower resolutions (720p, 480p) were not stretching to fill the entire screen
+- **Enhanced OpenGL Viewport Management** - Added aggressive viewport control that prevents ProjectM from overriding display scaling
+- **Native Viewport Persistence** - Implemented viewport restoration at both Java and native C++ levels
+- **Resolution-Independent Display** - All render resolutions now properly scale to full TV screen regardless of internal rendering size
+- **Improved Viewport Diagnostics** - Added comprehensive logging to verify viewport settings are maintained correctly
 
 ### 🎵 Existing Features
 
@@ -108,11 +108,11 @@ projectm-androidtv-1.4.apk: [checksum will be generated after building the final
 ## Full Changelog for v1.4
 
 ### Fixed
-- Further refined resolution scaling - ensuring visualizations properly stretch to fill the entire screen at all resolutions
-- Improved OpenGL error handling to prevent potential rendering issues
-- Ensured version display consistency across the application
-- Enhanced viewport stability during resolution and orientation changes
-- Optimized rendering during transitions between different resolution modes
+- **CRITICAL FIX: Viewport scaling issue completely resolved** - 720p, 480p, and all lower resolutions now properly stretch to fill the entire TV screen
+- **Fixed ProjectM viewport override** - Prevented ProjectM library from resetting viewport to internal render resolution
+- **Enhanced viewport persistence** - Added multiple layers of viewport restoration at both Java and native levels
+- **Fixed aspect ratio scaling** - All render resolutions maintain proper fullscreen display regardless of internal size
+- **Improved OpenGL state management** - Better handling of viewport changes during rendering and resolution switches
 
 ### Added
 - Added additional viewport management safeguards

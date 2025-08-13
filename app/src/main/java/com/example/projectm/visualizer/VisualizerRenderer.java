@@ -56,6 +56,17 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                 lastPresetChange = System.currentTimeMillis();
                 Log.i(TAG, "ProjectM initialized successfully");
                 
+                // CRITICAL: Set viewport immediately after ProjectM initialization
+                // This ensures we capture the full display dimensions for viewport scaling
+                try {
+                    ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                    Log.i(TAG, "Set initial viewport to full display: " + mWidth + "x" + mHeight);
+                } catch (Exception e) {
+                    // Fall back to direct GL call if ProjectMJNI method fails
+                    GLES20.glViewport(0, 0, mWidth, mHeight);
+                    Log.i(TAG, "Set initial viewport via GLES20: " + mWidth + "x" + mHeight);
+                }
+                
                 // Verify initialization by getting current preset name
                 String currentPreset = ProjectMJNI.getCurrentPresetName();
                 Log.i(TAG, "Initial preset: " + currentPreset);
@@ -84,17 +95,23 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 gl) {
         try {
             if (mProjectMInitialized) {
+                // Store current viewport before rendering
+                int[] viewport = new int[4];
+                GLES20.glGetIntegerv(GLES20.GL_VIEWPORT, viewport, 0);
+                
                 // Clear the entire screen to black to avoid artifacts when changing resolution
                 GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                 GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
                 
-                // Always set viewport to stretch content to full screen
+                // ALWAYS set viewport to full screen BEFORE rendering
                 // This ensures the visualization is stretched to fill the entire screen
                 try {
                     ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                    Log.v(TAG, "Set viewport before render: " + mWidth + "x" + mHeight);
                 } catch (Exception e) {
                     // Fall back to direct GL call if ProjectMJNI method fails
                     GLES20.glViewport(0, 0, mWidth, mHeight);
+                    Log.v(TAG, "Set viewport via GLES20 before render: " + mWidth + "x" + mHeight);
                 }
                 
                 // Track performance
@@ -166,12 +183,29 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
                 // Render the frame
                 ProjectMJNI.onDrawFrame();
                 
-                // Ensure viewport is still correct after rendering
+                // CRITICAL: Set viewport again AFTER ProjectM rendering
+                // ProjectM might reset the viewport during rendering, so we need to restore it
                 try {
                     ProjectMJNI.setViewport(0, 0, mWidth, mHeight);
+                    Log.v(TAG, "Restored viewport after render: " + mWidth + "x" + mHeight);
                 } catch (Exception e) {
                     // Fall back to direct GL call if ProjectMJNI method fails
                     GLES20.glViewport(0, 0, mWidth, mHeight);
+                    Log.v(TAG, "Restored viewport via GLES20 after render: " + mWidth + "x" + mHeight);
+                }
+                
+                // Verify viewport was set correctly
+                int[] finalViewport = new int[4];
+                GLES20.glGetIntegerv(GLES20.GL_VIEWPORT, finalViewport, 0);
+                if (finalViewport[2] != mWidth || finalViewport[3] != mHeight) {
+                    Log.w(TAG, "Viewport mismatch! Expected: " + mWidth + "x" + mHeight + 
+                          ", Actual: " + finalViewport[2] + "x" + finalViewport[3]);
+                    
+                    // Force it again
+                    GLES20.glViewport(0, 0, mWidth, mHeight);
+                    Log.w(TAG, "Forced viewport correction to: " + mWidth + "x" + mHeight);
+                } else {
+                    Log.v(TAG, "Viewport verified correct: " + finalViewport[2] + "x" + finalViewport[3]);
                 }
                 
                 // Auto-change presets if enabled
