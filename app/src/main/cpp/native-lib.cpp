@@ -246,7 +246,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetVersion(JNIEnv *env, j
     if (g_projectm) {
         // In projectM-4, we can use various info functions if available
         // This is an example - actual implementation depends on projectM API
-        return env->NewStringUTF("ProjectM-4 Android TV Edition 1.4");
+        return env->NewStringUTF("ProjectM-4 Android TV Edition 1.5");
     }
     return env->NewStringUTF("ProjectM-4");
 }

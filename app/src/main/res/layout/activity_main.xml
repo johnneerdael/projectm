@@ -220,7 +220,7 @@
             android:layout_height="wrap_content"
             android:textColor="#80FFFFFF"
             android:textSize="12sp"
-            android:text="ProjectM Visualizer v1.4" />
+            android:text="ProjectM Visualizer v1.5" />
     </LinearLayout>
 
     <!-- FPS display for when menu is closed -->
