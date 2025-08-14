@@ -111,12 +111,26 @@ void MilkdropSprite::Draw(const Audio::FrameAudioData& audioData,
                           uint32_t outputFramebufferObject,
                           PresetList presets)
 {
+    // Early exit optimizations
+    if (!m_texture || m_texture->Empty())
+    {
+        return; // No texture to draw
+    }
+    
     auto spriteShader = m_spriteShader.lock();
-    assert(spriteShader.get());
+    if (!spriteShader)
+    {
+        return; // No shader available
+    }
 
     m_codeContext.RunPerFrameCode(audioData, renderContext);
 
     m_spriteDone = *m_codeContext.done != 0.0;
+    if (m_spriteDone)
+    {
+        return; // Sprite animation is complete
+    }
+    
     bool burnIn = *m_codeContext.burn != 0.0;
 
     Quad vertices{};
@@ -288,7 +302,18 @@ void MilkdropSprite::Draw(const Audio::FrameAudioData& audioData,
             }
 
             preset.get()->BindFramebuffer();
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            
+            // Check framebuffer completeness before drawing to avoid GL_INVALID_FRAMEBUFFER_OPERATION
+            GLenum framebufferStatus = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+            if (framebufferStatus == GL_FRAMEBUFFER_COMPLETE)
+            {
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            }
+            else
+            {
+                // Skip drawing to incomplete framebuffer to avoid GL errors
+                // This can happen during preset transitions when framebuffer attachments are being recreated
+            }
         }
 
         // Reset to original FBO

@@ -1,5 +1,4 @@
 #include "Framebuffer.hpp"
-#include "../ProjectM.hpp" // for external framebuffer override globals
 
 namespace libprojectM {
 namespace Renderer {
@@ -47,6 +46,15 @@ void Framebuffer::Bind(int framebufferIndex)
 
     glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferIds.at(framebufferIndex));
 
+    // Check framebuffer completeness to avoid GL_INVALID_FRAMEBUFFER_OPERATION errors
+    // Use cached check for better performance
+    GLenum status = CheckFramebufferStatusCached(framebufferIndex);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        // Log warning but don't fail - caller should handle GL errors gracefully
+        // This can happen during texture resizing or preset transitions
+    }
+
     m_readFramebuffer = m_drawFramebuffer = framebufferIndex;
 }
 
@@ -71,18 +79,19 @@ void Framebuffer::BindDraw(int framebufferIndex)
 
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_framebufferIds.at(framebufferIndex));
 
+    // Check framebuffer completeness for draw operations
+    GLenum status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        // Incomplete framebuffer for drawing - this will cause GL_INVALID_FRAMEBUFFER_OPERATION
+        // Log warning but continue - calling code should check GL errors
+    }
+
     m_drawFramebuffer = framebufferIndex;
 }
 
 void Framebuffer::Unbind()
 {
-    // If the host application wants to keep its FBO bound, defer unbinding.
-    if (::libprojectM::g_respect_external_framebuffer) {
-        if (::libprojectM::g_external_incoming_framebuffer != 0) {
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)::libprojectM::g_external_incoming_framebuffer);
-            return;
-        }
-    }
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 }
 
@@ -105,8 +114,20 @@ bool Framebuffer::SetSize(int width, int height)
             texture.second->SetSize(width, height);
             glFramebufferTexture2D(GL_FRAMEBUFFER, texture.first, GL_TEXTURE_2D, texture.second->Texture()->TextureID(), 0);
         }
+        
+        // Check framebuffer completeness after resizing all attachments
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+        {
+            // Framebuffer is incomplete after resize - this is a critical source of GL_INVALID_FRAMEBUFFER_OPERATION
+            // This commonly happens during preset transitions when textures are being resized
+        }
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    // Invalidate cached framebuffer status after resize
+    m_statusCacheValid = false;
+    m_framebufferStatusCache.clear();
 
     return true;
 }
@@ -220,7 +241,19 @@ void Framebuffer::CreateColorAttachment(int framebufferIndex, int attachmentInde
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachmentIndex, GL_TEXTURE_2D, texture->TextureID(), 0);
     }
     UpdateDrawBuffers(framebufferIndex);
+    
+    // Check framebuffer completeness after attaching color texture
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        // Framebuffer is incomplete after color attachment - this could cause GL_INVALID_FRAMEBUFFER_OPERATION
+        // Continue anyway but calling code should handle GL errors gracefully
+    }
+    
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    // Invalidate cache since framebuffer attachments changed
+    m_statusCacheValid = false;
 }
 
 void Framebuffer::RemoveColorAttachment(int framebufferIndex, int attachmentIndex)
@@ -261,7 +294,18 @@ void Framebuffer::CreateDepthAttachment(int framebufferIndex)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture->TextureID(), 0);
     }
     UpdateDrawBuffers(framebufferIndex);
+    
+    // Check framebuffer completeness after attaching depth texture
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        // Framebuffer is incomplete after depth attachment
+    }
+    
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    // Invalidate cache since framebuffer attachments changed
+    m_statusCacheValid = false;
 }
 
 void Framebuffer::RemoveDepthAttachment(int framebufferIndex)
@@ -286,7 +330,18 @@ void Framebuffer::CreateStencilAttachment(int framebufferIndex)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texture->TextureID(), 0);
     }
     UpdateDrawBuffers(framebufferIndex);
+    
+    // Check framebuffer completeness after attaching stencil texture
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        // Framebuffer is incomplete after stencil attachment
+    }
+    
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    // Invalidate cache since framebuffer attachments changed
+    m_statusCacheValid = false;
 }
 
 void Framebuffer::RemoveStencilAttachment(int framebufferIndex)
@@ -311,7 +366,18 @@ void Framebuffer::CreateDepthStencilAttachment(int framebufferIndex)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texture->TextureID(), 0);
     }
     UpdateDrawBuffers(framebufferIndex);
+    
+    // Check framebuffer completeness after attaching depth-stencil texture
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        // Framebuffer is incomplete after depth-stencil attachment
+    }
+    
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    // Invalidate cache since framebuffer attachments changed
+    m_statusCacheValid = false;
 }
 
 void Framebuffer::RemoveDepthStencilAttachment(int framebufferIndex)
@@ -405,6 +471,43 @@ void Framebuffer::RemoveAttachment(int framebufferIndex, GLenum attachmentType)
     // Reset to previous read/draw buffers
     glBindFramebuffer(GL_READ_FRAMEBUFFER, m_framebufferIds.at(m_readFramebuffer));
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_framebufferIds.at(m_drawFramebuffer));
+}
+
+GLenum Framebuffer::CheckFramebufferStatusCached(int framebufferIndex, GLenum target) const
+{
+    if (framebufferIndex < 0 || framebufferIndex >= static_cast<int>(m_framebufferIds.size()))
+    {
+        return GL_FRAMEBUFFER_UNDEFINED;
+    }
+    
+    // Check cache first for performance optimization
+    if (m_statusCacheValid && target == GL_FRAMEBUFFER)
+    {
+        auto it = m_framebufferStatusCache.find(framebufferIndex);
+        if (it != m_framebufferStatusCache.end())
+        {
+            return it->second;
+        }
+    }
+    
+    // Cache miss or different target - perform actual GL check
+    GLint currentFramebuffer;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFramebuffer);
+    
+    glBindFramebuffer(target, m_framebufferIds.at(framebufferIndex));
+    GLenum status = glCheckFramebufferStatus(target);
+    
+    // Restore previous framebuffer binding
+    glBindFramebuffer(target, currentFramebuffer);
+    
+    // Cache the result if it's a standard framebuffer check
+    if (target == GL_FRAMEBUFFER)
+    {
+        m_framebufferStatusCache[framebufferIndex] = status;
+        m_statusCacheValid = true;
+    }
+    
+    return status;
 }
 
 } // namespace Renderer

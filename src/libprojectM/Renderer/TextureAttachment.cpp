@@ -48,6 +48,13 @@ void TextureAttachment::SetSize(int width, int height)
 {
     if (width > 0 && height > 0)
     {
+        // Optimization: Only recreate texture if size actually changed
+        if (m_texture && m_texture->Width() == width && m_texture->Height() == height)
+        {
+            // Size unchanged, no need to recreate texture - major performance optimization
+            return;
+        }
+        
         ReplaceTexture(width, height);
     }
     else

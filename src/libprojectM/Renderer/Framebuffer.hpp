@@ -206,6 +206,14 @@ public:
     void RemoveDepthStencilAttachment(int framebufferIndex);
 
     /**
+     * @brief Checks framebuffer completeness with caching for performance.
+     * @param framebufferIndex The framebuffer index to check.
+     * @param target GL framebuffer target (GL_FRAMEBUFFER, GL_DRAW_FRAMEBUFFER, GL_READ_FRAMEBUFFER)
+     * @return GL framebuffer status (GL_FRAMEBUFFER_COMPLETE if ready for rendering)
+     */
+    GLenum CheckFramebufferStatusCached(int framebufferIndex, GLenum target = GL_FRAMEBUFFER) const;
+
+    /**
      * @brief Sets the masked flag for a specific draw buffer.
      * This can be used to enable or disable rendering to specific color attachments.
      * With GLES 3.1 and lower, this will always mask all buffers.
@@ -238,6 +246,10 @@ private:
 
     int m_readFramebuffer{}; //!< Index of the framebuffer currently being read.
     int m_drawFramebuffer{}; //!< Index of the framebuffer currently being drawn to.
+    
+    // Performance optimization: Cache framebuffer completeness status
+    mutable std::map<int, GLenum> m_framebufferStatusCache{}; //!< Cached completeness status per framebuffer
+    mutable bool m_statusCacheValid{false}; //!< Whether the status cache is valid
 };
 
 } // namespace Renderer

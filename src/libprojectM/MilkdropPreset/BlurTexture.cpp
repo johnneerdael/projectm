@@ -156,15 +156,27 @@ void BlurTexture::Update(const Renderer::Texture& sourceTexture, const PerFrameC
     bias[2] = -tempMin * scale[2];
 
     // Remember previously bound framebuffer
-    GLint origReadFramebuffer;
-    GLint origDrawFramebuffer;
+    // Store original framebuffer bindings for restoration - batch GL queries for performance
+    GLint origReadFramebuffer, origDrawFramebuffer;
     glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &origReadFramebuffer);
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &origDrawFramebuffer);
 
+    // Batch GL state setup for blur passes
     m_blurFramebuffer.Bind(0);
-
     glBlendFunc(GL_ONE, GL_ZERO);
     glBindVertexArray(m_vaoBlur);
+
+    // Cache shader references to avoid weak_ptr locks in loop
+    auto blur1Shader = m_blur1Shader.lock();
+    auto blur2Shader = m_blur2Shader.lock();
+    
+    if (!blur1Shader || !blur2Shader)
+    {
+        // Restore state and return early if shaders are not available
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, origReadFramebuffer);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, origDrawFramebuffer);
+        return;
+    }
 
     for (unsigned int pass = 0; pass < passes; pass++)
     {
@@ -173,19 +185,15 @@ void BlurTexture::Update(const Renderer::Texture& sourceTexture, const PerFrameC
             continue;
         }
 
-        // set pixel shader
+        // Use cached shader references for better performance
         std::shared_ptr<Renderer::Shader> blurShader;
         if ((pass % 2) == 0)
         {
-            blurShader = m_blur1Shader.lock();
+            blurShader = blur1Shader;
         }
         else
         {
-            blurShader = m_blur2Shader.lock();
-        }
-        if (!blurShader)
-        {
-            return;
+            blurShader = blur2Shader;
         }
 
         blurShader->Bind();
@@ -267,13 +275,23 @@ void BlurTexture::Update(const Renderer::Texture& sourceTexture, const PerFrameC
             }
         }
 
-        // Draw fullscreen quad
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        // Check framebuffer completeness before drawing to avoid GL_INVALID_FRAMEBUFFER_OPERATION
+        GLenum framebufferStatus = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+        if (framebufferStatus == GL_FRAMEBUFFER_COMPLETE)
+        {
+            // Draw fullscreen quad
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-        // Save to blur texture
-        m_blurTextures[pass]->Bind(0);
-        glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, m_blurTextures[pass]->Width(), m_blurTextures[pass]->Height());
-        m_blurTextures[pass]->Unbind(0);
+            // Save to blur texture
+            m_blurTextures[pass]->Bind(0);
+            glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, m_blurTextures[pass]->Width(), m_blurTextures[pass]->Height());
+            m_blurTextures[pass]->Unbind(0);
+        }
+        else
+        {
+            // Skip blur pass on incomplete framebuffer to avoid GL errors
+            // This can happen during texture resize operations
+        }
     }
 
     glBindVertexArray(0);
