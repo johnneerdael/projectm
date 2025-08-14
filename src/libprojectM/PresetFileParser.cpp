@@ -24,7 +24,14 @@ auto PresetFileParser::Read(std::istream& presetStream) -> bool
     auto fileSize = presetStream.tellg();
     presetStream.seekg(0, presetStream.beg);
 
-    if (static_cast<size_t>(fileSize) > maxFileSize)
+    // Android TV: Enhanced file size validation
+    if (fileSize < 0 || static_cast<size_t>(fileSize) > maxFileSize)
+    {
+        return false;
+    }
+
+    // Android TV: Additional safety check for very small files
+    if (fileSize < 10) // Too small to be a valid preset
     {
         return false;
     }
@@ -39,10 +46,17 @@ auto PresetFileParser::Read(std::istream& presetStream) -> bool
 
     size_t startPos{0}; //!< Starting position of current line
     size_t pos{0};      //!< Current read position
+    size_t lineCount{0}; //!< Android TV: Track line count for safety
 
-    auto parseLineIfDataAvailable = [this, &pos, &startPos, &presetFileContents]() {
+    auto parseLineIfDataAvailable = [this, &pos, &startPos, &presetFileContents, &lineCount]() {
         if (pos > startPos)
         {
+            // Android TV: Limit excessive line counts
+            if (++lineCount > 10000) // Prevent parsing massive presets
+            {
+                return;
+            }
+            
             auto beg = presetFileContents.begin();
             std::string line(beg + startPos, beg + pos);
             ParseLine(line);
@@ -82,7 +96,11 @@ auto PresetFileParser::GetCode(const std::string& keyPrefix) const -> std::strin
 
     key.replace(0, lowerKey.length(), lowerKey);
 
-    for (int index{1}; index <= 99999; ++index)
+    // Android TV: Limit code block iterations to prevent excessive processing
+    constexpr int maxCodeLines = 1000; // Conservative limit for Android TV
+    int lineCount = 0;
+
+    for (int index{1}; index <= 99999 && lineCount < maxCodeLines; ++index)
     {
         key.replace(lowerKey.length(), 5, std::to_string(index));
         if (m_presetValues.find(key) == m_presetValues.end())
@@ -92,12 +110,20 @@ auto PresetFileParser::GetCode(const std::string& keyPrefix) const -> std::strin
 
         auto line = m_presetValues.at(key);
 
+        // Android TV: Validate line length
+        if (line.length() > 512) // Prevent excessive line lengths
+        {
+            line = line.substr(0, 512);
+        }
+
         // Remove backtick char in shader code
         if (!line.empty() && line.at(0) == '`')
         {
             line.erase(0, 1);
         }
         code << line << std::endl;
+        ++lineCount;
+    }
     }
 
     auto codeStr = code.str();

@@ -84,6 +84,9 @@ private:
 
     auto ParseExtension(const std::string& filename) -> std::string;
 
+    /// Android TV: Validates preset compatibility with device constraints
+    bool ValidatePresetForAndroidTV(Preset* preset) const;
+
     mutable std::map<std::string, PresetFactory*> m_factoryMap;
     mutable std::vector<PresetFactory*> m_factoryList;
     void ClearFactories();

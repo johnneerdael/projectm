@@ -34,7 +34,14 @@ void TimeKeeper::UpdateTimers()
         currentFrameTime = std::chrono::duration<double>(currentTime - m_startTime).count();
     }
 
-    m_secondsSinceLastFrame = currentFrameTime - m_currentTime;
+    // Android TV: Clamp extreme time deltas that could cause instability
+    double timeDelta = currentFrameTime - m_currentTime;
+    if (timeDelta < 0.0 || timeDelta > 1.0) // More than 1 second indicates something wrong
+    {
+        timeDelta = 0.016667; // Default to 60fps timing
+    }
+    
+    m_secondsSinceLastFrame = timeDelta;
     m_currentTime = currentFrameTime;
     m_presetFrameA++;
     m_presetFrameB++;
@@ -126,8 +133,14 @@ double TimeKeeper::sampledPresetDuration()
         return m_presetDuration;
     }
 
-    std::normal_distribution<double> gaussianDistribution(m_presetDuration, m_easterEgg);
-    return std::max<double>(1.0, gaussianDistribution(m_randomGenerator));
+    // Android TV: Clamp easter egg parameter to prevent extreme durations
+    double clampedEasterEgg = std::max(0.0, std::min(m_easterEgg, m_presetDuration * 0.5));
+    
+    std::normal_distribution<double> gaussianDistribution(m_presetDuration, clampedEasterEgg);
+    double duration = gaussianDistribution(m_randomGenerator);
+    
+    // Android TV: Clamp duration to reasonable bounds (1s to 10x preset duration)
+    return std::max(1.0, std::min(duration, m_presetDuration * 10.0));
 }
 
 } // namespace libprojectM

@@ -13,8 +13,14 @@ auto SpriteManager::Spawn(const std::string& type,
                           const std::string& spriteData,
                           const Renderer::RenderContext& renderContext) -> uint32_t
 {
-    // If user set the limit to zero, don't bother.
-    if (m_spriteSlots == 0)
+    // Android TV: More restrictive sprite limits to prevent memory issues
+    if (m_spriteSlots == 0 || m_spriteSlots > 16)
+    {
+        return 0;
+    }
+
+    // Android TV: Validate sprite data size to prevent excessive memory usage
+    if (spriteData.empty() || spriteData.length() > 32768)  // 32KB limit
     {
         return 0;
     }
@@ -38,6 +44,11 @@ auto SpriteManager::Spawn(const std::string& type,
     {
         return 0;
     }
+    catch (const std::bad_alloc&)
+    {
+        // Android TV: Handle memory allocation failures
+        return 0;
+    }
     catch (...)
     {
         return 0;
@@ -46,7 +57,7 @@ auto SpriteManager::Spawn(const std::string& type,
     auto spriteIdentifier = GetLowestFreeIdentifier();
 
     // Already at max sprites, destroy the oldest sprite to make room.
-    if (m_sprites.size() == m_spriteSlots)
+    if (m_sprites.size() >= m_spriteSlots)
     {
         Destroy(m_sprites.front().first);
     }
@@ -62,12 +73,53 @@ void SpriteManager::Draw(const Audio::FrameAudioData& audioData,
                          uint32_t outputFramebufferObject,
                          Sprite::PresetList presets)
 {
-    for (auto& idAndSprite : m_sprites) {
-        idAndSprite.second->Draw(audioData, renderContext, outputFramebufferObject, presets);
+    // Android TV: Early exit if no sprites or invalid context
+    if (m_sprites.empty() || renderContext.viewportSizeX <= 0 || renderContext.viewportSizeY <= 0)
+    {
+        return;
+    }
 
-        if (idAndSprite.second->Done())
+    // Android TV: Validate framebuffer before drawing sprites
+    GLint currentFbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFbo);
+    if (currentFbo != static_cast<GLint>(outputFramebufferObject))
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, outputFramebufferObject);
+    }
+
+    // Check framebuffer completeness for Android TV compatibility
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        return;
+    }
+
+    // Android TV: Process sprites with iterator to allow safe deletion during iteration
+    auto it = m_sprites.begin();
+    while (it != m_sprites.end())
+    {
+        auto& idAndSprite = *it;
+        
+        try
         {
-            Destroy(idAndSprite.first);
+            idAndSprite.second->Draw(audioData, renderContext, outputFramebufferObject, presets);
+            
+            if (idAndSprite.second->Done())
+            {
+                auto spriteId = idAndSprite.first;
+                ++it;  // Advance iterator before deletion
+                Destroy(spriteId);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+        catch (...)
+        {
+            // Android TV: Handle drawing exceptions gracefully
+            auto spriteId = idAndSprite.first;
+            ++it;
+            Destroy(spriteId);
         }
     }
 }
@@ -108,10 +160,12 @@ auto SpriteManager::ActiveSpriteIdentifiers() const -> std::vector<SpriteIdentif
 
 void SpriteManager::SpriteSlots(uint32_t slots)
 {
-    m_spriteSlots = slots;
+    // Android TV: Enforce maximum sprite limit for memory management
+    constexpr uint32_t MAX_ANDROID_TV_SPRITES = 8;
+    m_spriteSlots = std::min(slots, MAX_ANDROID_TV_SPRITES);
 
     // Remove excess sprites if limit was lowered
-    while (m_sprites.size() > slots)
+    while (m_sprites.size() > m_spriteSlots)
     {
         m_spriteIdentifiers.erase(m_sprites.front().first);
         m_sprites.pop_front();

@@ -111,24 +111,52 @@ void MilkdropSprite::Draw(const Audio::FrameAudioData& audioData,
                           uint32_t outputFramebufferObject,
                           PresetList presets)
 {
-    // Early exit optimizations
-    if (!m_texture || m_texture->Empty())
+    // Android TV: Enhanced early exit optimizations
+    if (!m_texture || m_texture->Empty() || 
+        renderContext.viewportSizeX <= 0 || renderContext.viewportSizeY <= 0)
     {
-        return; // No texture to draw
+        m_spriteDone = true;
+        return;
     }
     
     auto spriteShader = m_spriteShader.lock();
     if (!spriteShader)
     {
-        return; // No shader available
+        m_spriteDone = true;
+        return;
     }
 
-    m_codeContext.RunPerFrameCode(audioData, renderContext);
+    // Android TV: Validate framebuffer before proceeding
+    GLint currentFbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFbo);
+    if (currentFbo != static_cast<GLint>(outputFramebufferObject))
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, outputFramebufferObject);
+        
+        // Verify framebuffer completeness for Android TV
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        {
+            m_spriteDone = true;
+            return;
+        }
+    }
+
+    // Android TV: Safe expression code execution with error handling
+    try
+    {
+        m_codeContext.RunPerFrameCode(audioData, renderContext);
+    }
+    catch (...)
+    {
+        // Android TV: If expression evaluation fails, mark sprite as done
+        m_spriteDone = true;
+        return;
+    }
 
     m_spriteDone = *m_codeContext.done != 0.0;
     if (m_spriteDone)
     {
-        return; // Sprite animation is complete
+        return;
     }
     
     bool burnIn = *m_codeContext.burn != 0.0;
@@ -136,15 +164,16 @@ void MilkdropSprite::Draw(const Audio::FrameAudioData& audioData,
     Quad vertices{};
 
     // Get values from expression code and clamp them where necessary.
-    float x = std::min(1000.0f, std::max(-1000.0f, static_cast<float>(*m_codeContext.x) * 2.0f - 1.0f));
-    float y = std::min(1000.0f, std::max(-1000.0f, static_cast<float>(*m_codeContext.y) * 2.0f - 1.0f));
-    float sx = std::min(1000.0f, std::max(-1000.0f, static_cast<float>(*m_codeContext.sx)));
-    float sy = std::min(1000.0f, std::max(-1000.0f, static_cast<float>(*m_codeContext.sy)));
+    // Android TV: More conservative clamping for stability
+    float x = std::min(100.0f, std::max(-100.0f, static_cast<float>(*m_codeContext.x) * 2.0f - 1.0f));
+    float y = std::min(100.0f, std::max(-100.0f, static_cast<float>(*m_codeContext.y) * 2.0f - 1.0f));
+    float sx = std::min(10.0f, std::max(0.01f, static_cast<float>(*m_codeContext.sx)));
+    float sy = std::min(10.0f, std::max(0.01f, static_cast<float>(*m_codeContext.sy)));
     float rot = static_cast<float>(*m_codeContext.rot);
     int flipx = (*m_codeContext.flipx == 0.0) ? 0 : 1; // Comparing float to 0.0 isn't actually a good idea...
     int flipy = (*m_codeContext.flipy == 0.0) ? 0 : 1;
-    float repeatx = std::min(100.0f, std::max(0.01f, static_cast<float>(*m_codeContext.repeatx)));
-    float repeaty = std::min(100.0f, std::max(0.01f, static_cast<float>(*m_codeContext.repeaty)));
+    float repeatx = std::min(10.0f, std::max(0.1f, static_cast<float>(*m_codeContext.repeatx)));
+    float repeaty = std::min(10.0f, std::max(0.1f, static_cast<float>(*m_codeContext.repeaty)));
 
     int blendMode = std::min(4, std::max(0, (static_cast<int>(*m_codeContext.blendmode))));
     float r = std::min(1.0f, std::max(0.0f, (static_cast<float>(*m_codeContext.r))));

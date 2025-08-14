@@ -86,16 +86,58 @@ void projectm_destroy(projectm_handle instance)
 void projectm_load_preset_file(projectm_handle instance, const char* filename,
                                bool smooth_transition)
 {
+    // Android TV: Enhanced validation for preset loading
+    if (!instance || !filename)
+    {
+        return;
+    }
+    
+    // Android TV: Check filename length
+    size_t filenameLen = strlen(filename);
+    if (filenameLen == 0 || filenameLen > 4096)
+    {
+        return;
+    }
+    
     auto projectMInstance = handle_to_instance(instance);
-    projectMInstance->LoadPresetFile(filename, smooth_transition);
+    try
+    {
+        projectMInstance->LoadPresetFile(filename, smooth_transition);
+    }
+    catch (...)
+    {
+        // Android TV: Graceful handling of load failures
+        return;
+    }
 }
 
 void projectm_load_preset_data(projectm_handle instance, const char* data,
                                bool smooth_transition)
 {
-    std::stringstream presetDataStream(data);
-    auto projectMInstance = handle_to_instance(instance);
-    projectMInstance->LoadPresetData(presetDataStream, smooth_transition);
+    // Android TV: Enhanced validation for preset data loading
+    if (!instance || !data)
+    {
+        return;
+    }
+    
+    // Android TV: Check data size limits
+    size_t dataLen = strlen(data);
+    if (dataLen == 0 || dataLen > 262144) // 256KB limit for Android TV
+    {
+        return;
+    }
+    
+    try
+    {
+        std::stringstream presetDataStream(data);
+        auto projectMInstance = handle_to_instance(instance);
+        projectMInstance->LoadPresetData(presetDataStream, smooth_transition);
+    }
+    catch (...)
+    {
+        // Android TV: Graceful handling of load failures
+        return;
+    }
 }
 
 void projectm_set_preset_switch_requested_event_callback(projectm_handle instance,
@@ -361,6 +403,15 @@ void projectm_get_window_size(projectm_handle instance, size_t* width, size_t* h
 void projectm_set_window_size(projectm_handle instance, size_t width, size_t height)
 {
     auto projectMInstance = handle_to_instance(instance);
+    
+    // Android TV: Validate and limit window dimensions
+    if (width > 3840) width = 3840;  // Max 4K width
+    if (height > 2160) height = 2160; // Max 4K height
+    
+    // Android TV: Ensure minimum size for proper rendering
+    if (width < 128) width = 128;
+    if (height < 72) height = 72;
+    
     projectMInstance->SetWindowSize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 }
 

@@ -18,6 +18,12 @@ void Filter::SetList(std::vector<std::string> filterList)
 
 auto Filter::Passes(const std::string& filename) -> bool
 {
+    // Android TV: Basic validation
+    if (filename.empty() || filename.length() > 4096)
+    {
+        return false;
+    }
+
     for (const auto& filterExpression : m_filters)
     {
         if (!filterExpression.empty() && ApplyExpression(filename, filterExpression))
@@ -36,7 +42,9 @@ auto Filter::ApplyExpression(const std::string& filename, const std::string& fil
     // Implementation idea thanks to Robert van Engelen
     // https://www.codeproject.com/Articles/5163931/Fast-String-Matching-with-Wildcards-Globs-and-Giti
 
-    if (filename.empty() || filterExpression.empty())
+    // Android TV: Enhanced validation
+    if (filename.empty() || filterExpression.empty() || 
+        filename.length() > 4096 || filterExpression.length() > 1024)
     {
         return false;
     }

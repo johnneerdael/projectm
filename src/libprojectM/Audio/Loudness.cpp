@@ -12,6 +12,12 @@ Loudness::Loudness(Loudness::Band band)
 
 void Loudness::Update(const std::array<float, SpectrumSamples>& spectrumSamples, double secondsSinceLastFrame, uint32_t frame)
 {
+    // Android TV: Validate input parameters
+    if (secondsSinceLastFrame < 0.0 || secondsSinceLastFrame > 1.0)
+    {
+        secondsSinceLastFrame = 0.016667; // Default to 60fps
+    }
+
     SumBand(spectrumSamples);
     UpdateBandAverage(secondsSinceLastFrame, frame);
 }
@@ -31,11 +37,20 @@ void Loudness::SumBand(const std::array<float, SpectrumSamples>& spectrumSamples
     int start = SpectrumSamples * static_cast<int>(m_band) / 6;
     int end = SpectrumSamples * (static_cast<int>(m_band) + 1) / 6;
 
+    // Android TV: Bounds checking
+    start = std::max(0, std::min(start, static_cast<int>(SpectrumSamples) - 1));
+    end = std::max(start + 1, std::min(end, static_cast<int>(SpectrumSamples)));
+
     m_current = 0.0f;
     for (int sample = start; sample < end; sample++)
     {
-        m_current += spectrumSamples[sample];
+        // Android TV: Clamp extreme spectrum values
+        float clampedSample = std::max(-10.0f, std::min(10.0f, spectrumSamples[sample]));
+        m_current += clampedSample;
     }
+    
+    // Android TV: Prevent extreme accumulation
+    m_current = std::max(-100.0f, std::min(100.0f, m_current));
 }
 
 void Loudness::UpdateBandAverage(double secondsSinceLastFrame, uint32_t frame)

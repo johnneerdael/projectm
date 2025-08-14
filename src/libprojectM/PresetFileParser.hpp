@@ -19,7 +19,7 @@ class PresetFileParser
 public:
     using ValueMap = std::map<std::string, std::string>; //!< A map with key/value pairs, each representing one line in the preset file.
 
-    static constexpr size_t maxFileSize = 0x100000; //!< Maximum size of a preset file. Used for sanity checks.
+    static constexpr size_t maxFileSize = 0x40000; //!< Maximum size of a preset file for Android TV (256KB). Used for sanity checks.
 
     /**
      * @brief Reads the preset file into an internal map to prepare for parsing.

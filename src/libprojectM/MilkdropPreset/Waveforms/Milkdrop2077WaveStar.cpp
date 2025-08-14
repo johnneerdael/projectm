@@ -16,29 +16,43 @@ bool Milkdrop2077WaveStar::IsLoop()
 void Milkdrop2077WaveStar::GenerateVertices(const PresetState& presetState,
                                             const PerFrameContext&)
 {
-    m_samples = Audio::WaveformSamples / 2;
+    // Android TV: Conservative vertex limit for star patterns
+    m_samples = std::min(Audio::WaveformSamples / 2, 48);
 
     m_wave1Vertices.resize(m_samples + 1);
 
-    int const sampleOffset = (Audio::WaveformSamples - m_samples) / 2;
+    int const sampleOffset = std::max(0, (Audio::WaveformSamples - m_samples) / 2);
 
-    float const invertedSamplesMinusOne = 1.0f / static_cast<float>(m_samples - 1);
+    float const invertedSamplesMinusOne = 1.0f / static_cast<float>(std::max(1, m_samples - 1));
     float const tenthSamples = static_cast<float>(m_samples) * 0.1f;
 
     for (int sample = 0; sample < m_samples; sample++)
     {
-        float radius = 0.7f + 0.4f * m_pcmDataR[sample + sampleOffset] + m_mysteryWaveParam;
+        // Android TV: Safe array access and clamped parameters
+        int dataIndex = std::min(sample + sampleOffset, Audio::WaveformSamples - 1);
+        float clampedPcmData = std::max(-1.0f, std::min(1.0f, m_pcmDataR[dataIndex]));
+        float clampedMysteryParam = std::max(-0.5f, std::min(0.5f, m_mysteryWaveParam));
+        
+        float radius = 0.7f + 0.4f * clampedPcmData + clampedMysteryParam;
         float const angle = static_cast<float>(sample) * invertedSamplesMinusOne * 6.28f + presetState.renderContext.time * 0.2f;
-        if (static_cast<float>(sample) < m_samples / radius)
+        
+        // Android TV: Simplified radius calculation to avoid division by potentially small values
+        if (static_cast<float>(sample) < tenthSamples && radius > 0.1f)
         {
-            float mix = static_cast<float>(sample) / tenthSamples;
+            float mix = static_cast<float>(sample) / std::max(1.0f, tenthSamples);
             mix = 0.5f - 0.5f * cosf(mix * 3.1416f);
-            // Subtracting the sample offset here instead of adding it, as the original Milkdrop2077 code accessed out-of-range data.
-            float const radius2 = 0.5f + 0.4f * m_pcmDataR[sample + m_samples - sampleOffset] + m_mysteryWaveParam;
+            
+            // Android TV: Safe array access for radius2 calculation
+            int radius2Index = std::max(0, std::min(sample + m_samples - sampleOffset, Audio::WaveformSamples - 1));
+            float clampedPcmData2 = std::max(-1.0f, std::min(1.0f, m_pcmDataR[radius2Index]));
+            float const radius2 = 0.5f + 0.4f * clampedPcmData2 + clampedMysteryParam;
             radius = radius2 * (1.0f - mix) + radius * mix;
         }
-        m_wave1Vertices[sample].x = radius * cosf(angle) * m_aspectY + m_waveX;
-        m_wave1Vertices[sample].y = radius * sinf(angle) * m_aspectX + m_waveY;
+        
+        // Android TV: Clamp radius and coordinates
+        radius = std::max(0.1f, std::min(2.0f, radius));
+        m_wave1Vertices[sample].x = std::max(-2.0f, std::min(2.0f, radius * cosf(angle) * m_aspectY + m_waveX));
+        m_wave1Vertices[sample].y = std::max(-2.0f, std::min(2.0f, radius * sinf(angle) * m_aspectX + m_waveY));
     }
 }
 

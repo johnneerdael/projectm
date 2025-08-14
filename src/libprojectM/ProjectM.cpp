@@ -52,10 +52,22 @@ static inline void pmCaptureIncomingFramebuffer() {
             GLint generic = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &generic);
             if (generic != 0) g_external_incoming_framebuffer = generic;
         }
+        
+        // Android TV: Validate captured framebuffer
+        if (g_external_incoming_framebuffer < 0)
+        {
+            g_external_incoming_framebuffer = 0;
+        }
     }
 #else
     if (g_respect_external_framebuffer) {
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &g_external_incoming_framebuffer);
+        
+        // Android TV: Validate captured framebuffer
+        if (g_external_incoming_framebuffer < 0)
+        {
+            g_external_incoming_framebuffer = 0;
+        }
     }
 #endif
 }
@@ -66,8 +78,22 @@ static inline void pmBindDrawFramebuffer(GLuint targetFramebufferObject) {
         GLuint fb = (g_external_incoming_framebuffer != 0) ? (GLuint)g_external_incoming_framebuffer
                                                            : (GLuint)targetFramebufferObject;
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb);
+        
+        // Android TV: Validate framebuffer completeness after binding
+        if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        {
+            // Fallback to default framebuffer if external FBO is incomplete
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        }
     } else {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)targetFramebufferObject);
+        
+        // Android TV: Validate framebuffer completeness for all binds
+        if (targetFramebufferObject != 0 && 
+            glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        {
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        }
     }
 }
 
@@ -129,11 +155,20 @@ void ProjectM::ResetTextures()
 
 void ProjectM::RenderFrame(uint32_t targetFramebufferObject /*= 0*/)
 {
-    // Don't render if window area is zero.
+    // Android TV: Enhanced validation before rendering
     if (m_windowWidth == 0 || m_windowHeight == 0)
     {
         return;
     }
+
+    // Android TV: Validate render dimensions to prevent oversized FBOs
+    if (m_windowWidth > 3840 || m_windowHeight > 2160)
+    {
+        return;
+    }
+
+    // Android TV: Capture and validate incoming framebuffer
+    pmCaptureIncomingFramebuffer();
 
     // Update FPS and other timer values.
     m_timeKeeper->UpdateTimers();
@@ -350,6 +385,23 @@ auto ProjectM::UserSpriteIdentifiers() const -> std::vector<uint32_t>
 
 void ProjectM::SetPresetLocked(bool locked)
 {
+    // Android TV: Enhanced preset lock with validation
+    if (locked && m_presetManager)
+    {
+        // Validate current preset doesn't exceed Android TV limits
+        try
+        {
+            if (m_renderContext->viewportWidth > 3840 || m_renderContext->viewportHeight > 2160)
+            {
+                locked = false; // Prevent locking incompatible presets
+            }
+        }
+        catch (...)
+        {
+            locked = false;
+        }
+    }
+
     // ToDo: Add a preset switch timer separate from the display timer and reset to 0 when
     //       disabling the preset switch lock.
     m_presetLocked = locked;

@@ -48,6 +48,12 @@ void PCM::Add(int16_t const* const samples, uint32_t channels, size_t const coun
 
 void PCM::UpdateFrameAudioData(double secondsSinceLastFrame, uint32_t frame)
 {
+    // Android TV: Validate timing parameters
+    if (secondsSinceLastFrame < 0.0 || secondsSinceLastFrame > 1.0)
+    {
+        secondsSinceLastFrame = 0.016667; // Default to 60fps timing
+    }
+
     // 1. Copy audio data from input buffer
     CopyNewWaveformData(m_inputBufferL, m_waveformL);
     CopyNewWaveformData(m_inputBufferR, m_waveformR);
@@ -64,7 +70,6 @@ void PCM::UpdateFrameAudioData(double secondsSinceLastFrame, uint32_t frame)
     m_bass.Update(m_spectrumL, secondsSinceLastFrame, frame);
     m_middles.Update(m_spectrumL, secondsSinceLastFrame, frame);
     m_treble.Update(m_spectrumL, secondsSinceLastFrame, frame);
-
 }
 
 auto PCM::GetFrameAudioData() const -> FrameAudioData
@@ -95,17 +100,23 @@ void PCM::UpdateSpectrum(const WaveformBuffer& waveformData, SpectrumBuffer& spe
     std::vector<float> waveformSamples(AudioBufferSamples);
     std::vector<float> spectrumValues;
 
+    // Android TV: More conservative damping for stability
     size_t oldI{0};
     for (size_t i = 0; i < AudioBufferSamples; i++)
     {
         // Damp the input into the FFT a bit, to reduce high-frequency noise:
-        waveformSamples[i] = 0.5f * (waveformData[i] + waveformData[oldI]);
+        // Android TV: Additional clamping for extreme values
+        float sample1 = std::max(-2.0f, std::min(2.0f, waveformData[i]));
+        float sample2 = std::max(-2.0f, std::min(2.0f, waveformData[oldI]));
+        waveformSamples[i] = 0.5f * (sample1 + sample2);
         oldI = i;
     }
 
     m_fft.TimeToFrequencyDomain(waveformSamples, spectrumValues);
 
-    std::copy(spectrumValues.begin(), spectrumValues.end(), spectrumData.begin());
+    // Android TV: Safe copy with bounds checking
+    size_t copySize = std::min(spectrumValues.size(), spectrumData.size());
+    std::copy(spectrumValues.begin(), spectrumValues.begin() + copySize, spectrumData.begin());
 }
 
 void PCM::CopyNewWaveformData(const WaveformBuffer& source, WaveformBuffer& destination)
