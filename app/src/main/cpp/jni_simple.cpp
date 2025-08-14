@@ -47,7 +47,7 @@ void previous_preset(bool hard_cut) {
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_onSurfaceCreated(
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_onSurfaceCreated(
         JNIEnv *env,
         jclass clazz,
         jint window_width,
@@ -97,7 +97,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_onSurfaceCreated(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_onSurfaceChanged(
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_onSurfaceChanged(
         JNIEnv *env,
         jclass clazz,
         jint window_width,
@@ -115,7 +115,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_onSurfaceChanged(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_onDrawFrame(
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_onDrawFrame(
         JNIEnv *env,
         jclass clazz) {
     if (!instance) {
@@ -129,7 +129,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_onDrawFrame(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_addPCM(
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_addPCM(
         JNIEnv *env,
         jclass clazz,
         jshortArray pcm_data,
@@ -149,7 +149,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_addPCM(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nextPreset(
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nextPreset(
         JNIEnv *env,
         jclass clazz) {
     ALOGD("nextPreset called");
@@ -157,7 +157,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nextPreset(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_previousPreset(
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_previousPreset(
         JNIEnv *env,
         jclass clazz) {
     ALOGD("previousPreset called");

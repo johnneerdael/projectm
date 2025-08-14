@@ -6,7 +6,7 @@
     tools:context=".visualizer.MainActivity">
 
     <!-- The GLSurfaceView for visualizations -->
-    <com.example.projectm.visualizer.VisualizerView
+    <com.johnneerdael.projectm.visualizer.VisualizerView
         android:id="@+id/visualizer_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

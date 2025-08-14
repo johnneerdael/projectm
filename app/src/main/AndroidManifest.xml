@@ -40,11 +40,12 @@
         android:theme="@style/Theme.Leanback">
         
         <activity
-            android:name="com.example.projectm.visualizer.MainActivity"
+            android:name="com.johnneerdael.projectm.visualizer.MainActivity"
             android:exported="true"
             android:screenOrientation="landscape"
             android:launchMode="singleTask"
-            android:configChanges="orientation|screenSize|keyboardHidden">
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.ProjectM.Launch">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -41,6 +41,7 @@ static GLuint g_fbo_texture = 0;
 static int g_render_width = 1920;
 static int g_render_height = 1080;
 static int g_target_fps = 60;
+static std::string g_last_preset_root; // last successfully loaded preset root
 
 projectm_handle g_projectm = nullptr;
 projectm_playlist_handle g_playlist = nullptr;
@@ -167,10 +168,46 @@ static PFNGLBLITFRAMEBUFFERPROC p_glBlitFramebuffer = nullptr;
 static bool g_has_discard_ext = false;        // GL_EXT_discard_framebuffer
 static bool g_discard_logged = false;         // one-time log when using discard
 static bool g_blit_error_logged = false;      // prevent spam if blit errors
-static bool g_disable_blit_fastpath = true;  // start disabled; can enable after validation
-static bool g_debug_inject_pattern = true;   // temporary debug aid: fill FBO if content missing
+static bool g_disable_blit_fastpath = true;   // start disabled; can enable after validation
+static bool g_debug_inject_pattern = false;   // disable magenta debug pattern unless explicitly enabled
+static bool g_debug_frame_inspect = true;    // inspect a pixel to detect persistent black frames
+static bool g_debug_overlay_after_upscale = false; // draw a colored overlay post upscale to validate default FB path
+static bool g_debug_verbose_viewport = false; // gate high-frequency viewport logs
+static int  g_consecutive_black_frames = 0;  // counter for consecutive black frames
+static int  g_logged_black_warning_level = 0; // track escalating warnings
 static int  g_fbo_rebind_events = 0;         // count how often projectM escapes our FBO
-static const int kRebindDisableThreshold = 120; // after ~2 seconds at 60fps, abandon perf mode
+static const int kRebindDisableThreshold = 6;   // quick fallback (~0.1s @60fps) if FBO keeps getting unbound
+static bool g_logged_direct_fb_escape = false;   // log once if direct path also sees FB rebinding
+static bool g_logged_direct_blank_inject = false; // log once if we inject a debug pattern direct path
+
+// Simple recursive directory walk to count raw preset files (.milk) for diagnostics
+#include <dirent.h>
+#include <sys/stat.h>
+static size_t count_milk_files(const std::string& path) {
+    size_t count = 0;
+    DIR* dir = opendir(path.c_str());
+    if (!dir) return 0;
+    struct dirent* ent;
+    while ((ent = readdir(dir)) != nullptr) {
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        std::string full = path + "/" + ent->d_name;
+        struct stat st{};
+        if (stat(full.c_str(), &st) != 0) continue;
+        if (S_ISDIR(st.st_mode)) {
+            count += count_milk_files(full);
+        } else {
+            // case-insensitive endswith .milk
+            std::string name = ent->d_name;
+            if (name.size() >= 5) {
+                std::string tail = name.substr(name.size()-5);
+                for (char &c : tail) c = (char)tolower(c);
+                if (tail == ".milk") count++;
+            }
+        }
+    }
+    closedir(dir);
+    return count;
+}
 // Function pointer for discard extension (loaded at runtime)
 #ifndef PFNGLDISCARDFRAMEBUFFEREXTPROC
 typedef void (GL_APIENTRYP PFNGLDISCARDFRAMEBUFFEREXTPROC) (GLenum target, GLsizei numAttachments, const GLenum *attachments);
@@ -437,7 +474,7 @@ void optimize_memory_usage() {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *env, jclass clazz, jint width, jint height, jstring preset_path) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *env, jclass clazz, jint width, jint height, jstring preset_path) {
     LOGI("Native onSurfaceCreated called with dimensions: %dx%d", width, height);
     const char* preset_path_chars = env->GetStringUTFChars(preset_path, nullptr);
     std::string preset_path_str(preset_path_chars);
@@ -445,8 +482,15 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *
     
     LOGI("Surface created with preset path: %s", preset_path_str.c_str());
 
+    // Store display dimensions early (on some devices onSurfaceChanged may arrive late)
+    g_display_width = width;
+    g_display_height = height;
+
     // Detect device capabilities for performance optimization
     detect_device_capabilities();
+
+    // Decide initial performance sizing before creating projectM/FBO so first frame isn't blank
+    update_performance_settings();
 
     // Create projectM instance
     g_projectm = projectm_create();
@@ -516,6 +560,23 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *
         g_performance_mode = false;
     }
 
+    // Create initial upscale shader / FBO BEFORE first draw so we can see content ASAP
+    if (g_performance_mode) {
+        if (g_upscale_program == 0) create_upscale_shader();
+        create_performance_fbo(g_render_width, g_render_height);
+    } else {
+        cleanup_performance_fbo();
+        g_render_width = g_display_width;
+        g_render_height = g_display_height;
+    }
+
+    // Ensure projectM knows its logical render size immediately (some devices delay surfaceChanged)
+    if (g_projectm) {
+        projectm_set_window_size(g_projectm, g_render_width, g_render_height);
+        LOGI("Initial projectM window size set: %dx%d (display=%dx%d perf=%s)",
+             g_render_width, g_render_height, g_display_width, g_display_height, g_performance_mode ? "ON" : "OFF");
+    }
+
     // Create playlist and connect it to projectM
     g_playlist = projectm_playlist_create(g_projectm);
     if (g_playlist == nullptr) {
@@ -528,13 +589,21 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *
     projectm_playlist_set_shuffle(g_playlist, true);
     LOGI("Shuffle enabled");
     
-    // Add preset directory recursively, allowing duplicates
-    bool result = projectm_playlist_add_path(g_playlist, preset_path_str.c_str(), true, false);
-    LOGI("Add preset path result: %s", result ? "SUCCESS" : "FAILED");
-    
-    // Get playlist size to verify presets were loaded
-    size_t preset_count = projectm_playlist_size(g_playlist);
-    LOGI("Loaded %zu presets from path", preset_count);
+    // Prefer <root>/presets first (common asset extraction layout). Fall back to <root> if empty.
+    bool result = false;
+    size_t preset_count = 0;
+    std::string path_presets = preset_path_str + "/presets";
+    result = projectm_playlist_add_path(g_playlist, path_presets.c_str(), true, false);
+    preset_count = projectm_playlist_size(g_playlist);
+    if (!result || preset_count == 0) {
+        LOGW("No presets under %s; falling back to %s", path_presets.c_str(), preset_path_str.c_str());
+        result = projectm_playlist_add_path(g_playlist, preset_path_str.c_str(), true, false);
+        preset_count = projectm_playlist_size(g_playlist);
+    }
+    LOGI("Preset scan: ok=%d count=%zu (primary=%s)", result ? 1 : 0, preset_count, path_presets.c_str());
+    // Diagnostic: compare raw file count on disk vs playlist size (to explain 731 vs expected)
+    size_t raw_count = count_milk_files(result && preset_count>0 ? path_presets : preset_path_str);
+    LOGI("Preset diagnostic: raw .milk files on disk=%zu playlist_unique=%zu duplicates_filtered=%s", raw_count, preset_count, "true");
     
     if (preset_count > 0) {
         // Play the first preset
@@ -547,7 +616,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceChanged(JNIEnv *env, jclass clazz,
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeOnSurfaceChanged(JNIEnv *env, jclass clazz,
                                                                         jint width, jint height) {
     LOGI("Surface changed - display size: %dx%d", width, height);
     
@@ -584,7 +653,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceChanged(JNIEnv *
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnDrawFrame(JNIEnv *env, jclass clazz) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeOnDrawFrame(JNIEnv *env, jclass clazz) {
     if (!g_projectm) return;
     if (g_display_width <= 0 || g_display_height <= 0) return; // wait for valid surface
 
@@ -595,6 +664,10 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnDrawFrame(JNIEnv *env, 
         glClear(GL_COLOR_BUFFER_BIT); // no depth clear (no depth attachment)
         GLint fbBefore = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbBefore);
         projectm_opengl_render_frame(g_projectm);
+        GLenum postErr = glGetError();
+        if (postErr != GL_NO_ERROR) {
+            LOGW("GL error after projectM render (perf path) 0x%x", postErr);
+        }
         GLint fbAfter = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbAfter);
         if (fbAfter != (GLint)g_fbo) {
             LOGW("projectM changed framebuffer binding (before=%d after=%d expected=%u) - restoring", fbBefore, fbAfter, g_fbo);
@@ -639,18 +712,112 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnDrawFrame(JNIEnv *env, 
         glViewport(0, 0, g_display_width, g_display_height);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        GLint fbBefore = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbBefore);
         projectm_opengl_render_frame(g_projectm);
+        GLenum dirErr = glGetError();
+        GLint fbAfter = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbAfter);
+        if (dirErr != GL_NO_ERROR) {
+            LOGW("GL error after direct projectM render 0x%x", dirErr);
+        }
+        if (fbAfter != 0 && !g_logged_direct_fb_escape) {
+            LOGW("Direct path: projectM left non-default FB bound (%d). Content may not reach screen. Forcing bind 0.", fbAfter);
+            g_logged_direct_fb_escape = true;
+        }
+        if (fbAfter != 0) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            // Attempt a SECOND render pass directly to default if first went elsewhere
+            projectm_opengl_render_frame(g_projectm);
+            // If still blank, optional pattern inject (disabled by default) for validation
+            if (g_debug_inject_pattern && !g_logged_direct_blank_inject) {
+                g_logged_direct_blank_inject = true;
+                glDisable(GL_SCISSOR_TEST);
+                glClearColor(0.2f, 0.0f, 0.2f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                LOGW("Injected direct-path debug tint (purple) to confirm swap chain visibility");
+            }
+        }
     }
 
     static int frame_count = 0;
-    if (g_memory_optimized && (++frame_count % 600) == 0) {
+    frame_count++;
+    if (g_memory_optimized && (frame_count % 600) == 0) {
         optimize_memory_usage();
+    }
+
+    // Optional per-frame center pixel inspection to detect continuous black output
+    if (g_debug_frame_inspect && (frame_count % 30) == 0) { // sample roughly twice per second at 60fps
+        unsigned char pixel[4] = {0,0,0,0};
+        int px = g_display_width / 2;
+        int py = g_display_height / 2;
+        glReadPixels(px, py, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+        GLenum err = glGetError();
+        bool is_black = (pixel[0] < 4 && pixel[1] < 4 && pixel[2] < 4); // small tolerance
+        if (err != GL_NO_ERROR) {
+            LOGW("Frame inspect glReadPixels error=0x%x", err);
+        } else if (is_black) {
+            g_consecutive_black_frames++;
+            if (g_consecutive_black_frames == 10 && g_logged_black_warning_level < 1) {
+                LOGW("Frames appear black (10 samples). Verifying projectM rendering path...");
+                g_logged_black_warning_level = 1;
+            } else if (g_consecutive_black_frames == 30 && g_logged_black_warning_level < 2) {
+                LOGW("Still black after ~30 sampled frames. Disabling performance mode & falling back to direct render. FBO=%u", g_fbo);
+                g_logged_black_warning_level = 2;
+                g_performance_mode = false;
+                cleanup_performance_fbo();
+                if (g_projectm && g_display_width > 0 && g_display_height > 0) {
+                    projectm_set_window_size(g_projectm, g_display_width, g_display_height);
+                }
+            } else if (g_consecutive_black_frames == 180 && g_logged_black_warning_level < 3) {
+                LOGW("Persistent black output (~180 samples). Potential causes: preset load failure, projectM FBO escape, missing window size, shader compile, or upstream clear overwriting. Investigate next.");
+                g_logged_black_warning_level = 3;
+            }
+        } else {
+            if (g_consecutive_black_frames >= 10) {
+                LOGI("Recovered from black frames after %d samples (pixel=%d,%d RGBA=%u,%u,%u,%u)", g_consecutive_black_frames, px, py, pixel[0], pixel[1], pixel[2], pixel[3]);
+            }
+            g_consecutive_black_frames = 0;
+        }
+    }
+
+    // Periodic state dump every ~240 frames (~4s at 60fps) to aid debugging.
+    if ((frame_count % 240) == 0) {
+        size_t playlist_size = g_playlist ? projectm_playlist_size(g_playlist) : 0;
+        size_t position = (g_playlist && playlist_size>0) ? projectm_playlist_get_position(g_playlist) : 0;
+        char* name = nullptr;
+        if (g_playlist && playlist_size>0) {
+            name = projectm_playlist_item(g_playlist, position);
+        }
+        LOGI("STATE_DUMP frame=%d proj=%p playlist=%p presets=%zu pos=%zu name=%s disp=%dx%d render=%dx%d perf=%d fbo=%u es3=%d blit=%s escapes=%d", frame_count, g_projectm, g_playlist, playlist_size, position, name?name:"<none>", g_display_width, g_display_height, g_render_width, g_render_height, g_performance_mode?1:0, g_fbo, g_has_es3?1:0, (!g_disable_blit_fastpath && g_has_es3 && p_glBlitFramebuffer)?"ON":"OFF", g_fbo_rebind_events);
+        if (name) free(name);
+    }
+
+    // Optional post-upscale overlay: draw a translucent tint so we can tell if default FB shows anything
+    if (g_debug_overlay_after_upscale) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // Simple immediate-mode style quad using legacy attributes (we'll reuse upscale shader if exists)
+        if (g_upscale_program) {
+            glUseProgram(g_upscale_program);
+            // Rebind VBO
+            glBindBuffer(GL_ARRAY_BUFFER, g_upscale_vbo);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+            // Overdraw tinted quad (using texture again) but modulate via glBlendColor is unavailable in ES2; just rely on alpha in constant color
+            // Instead we can clear with small alpha to tint - simpler:
+            glDisableVertexAttribArray(0);
+            glDisableVertexAttribArray(1);
+            glUseProgram(0);
+        }
+        glDisable(GL_BLEND);
     }
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeAddPCM(JNIEnv *env, jclass clazz,
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeAddPCM(JNIEnv *env, jclass clazz,
                                                              jshortArray pcm, jshort size) {
     if (g_projectm) {
         jshort *pcm_elements = env->GetShortArrayElements(pcm, nullptr);
@@ -705,7 +872,7 @@ void select_random_preset(bool hard_cut) {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeNextPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeNextPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
     if (g_playlist) {
         projectm_playlist_play_next(g_playlist, hard_cut);
         LOGI("Selected next preset (hard_cut: %s)", hard_cut ? "true" : "false");
@@ -716,7 +883,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeNextPreset(JNIEnv *env, j
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativePreviousPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativePreviousPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
     if (g_playlist) {
         projectm_playlist_play_previous(g_playlist, hard_cut);
         LOGI("Selected previous preset (hard_cut: %s)", hard_cut ? "true" : "false");
@@ -725,7 +892,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativePreviousPreset(JNIEnv *en
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSelectRandomPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSelectRandomPreset(JNIEnv *env, jclass clazz, jboolean hard_cut) {
     // Initialize random seed if needed
     static bool seeded = false;
     if (!seeded) {
@@ -739,7 +906,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeSelectRandomPreset(JNIEnv
 
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetCurrentPresetName(JNIEnv *env, jclass clazz) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeGetCurrentPresetName(JNIEnv *env, jclass clazz) {
     if (!g_playlist) {
         return env->NewStringUTF("No playlist available");
     }
@@ -759,7 +926,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetCurrentPresetName(JNIE
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetPresetDuration(JNIEnv *env, jclass clazz, jint seconds) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetPresetDuration(JNIEnv *env, jclass clazz, jint seconds) {
     if (g_projectm) {
         projectm_set_preset_duration(g_projectm, seconds);
         LOGI("Preset duration set to %d seconds", seconds);
@@ -768,7 +935,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetPresetDuration(JNIEnv 
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetSoftCutDuration(JNIEnv *env, jclass clazz, jint seconds) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetSoftCutDuration(JNIEnv *env, jclass clazz, jint seconds) {
     if (g_projectm) {
         projectm_set_soft_cut_duration(g_projectm, seconds);
         LOGI("Soft cut duration set to %d seconds", seconds);
@@ -777,7 +944,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetSoftCutDuration(JNIEnv
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeDestroy(JNIEnv *env, jclass clazz) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeDestroy(JNIEnv *env, jclass clazz) {
     if (g_playlist) {
         projectm_playlist_destroy(g_playlist);
         g_playlist = nullptr;
@@ -794,7 +961,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeDestroy(JNIEnv *env, jcla
 
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetVersion(JNIEnv *env, jclass clazz) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeGetVersion(JNIEnv *env, jclass clazz) {
     // Check if projectM API has a version function
     if (g_projectm) {
         // In projectM-4, we can use various info functions if available
@@ -806,7 +973,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetVersion(JNIEnv *env, j
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetPresetCount(JNIEnv *env, jclass clazz) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeGetPresetCount(JNIEnv *env, jclass clazz) {
     if (g_playlist) {
         size_t count = projectm_playlist_size(g_playlist);
         return static_cast<jint>(count);
@@ -817,17 +984,26 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetPresetCount(JNIEnv *en
 // Implementation of the native viewport setting
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetViewport(JNIEnv *env, jclass clazz, 
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetViewport(JNIEnv *env, jclass clazz, 
                                                                   jint x, jint y, jint width, jint height) {
     // Intentionally do NOT overwrite canonical display size here; surfaceChanged owns it.
     glViewport(x, y, width, height);
-    LOGI("Native setViewport called (no dimension store): %d,%d %dx%d", x, y, width, height);
+    if (g_debug_verbose_viewport) {
+        LOGI("Native setViewport called (no dimension store): %d,%d %dx%d", x, y, width, height);
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetVerboseViewport(JNIEnv* env, jclass clazz, jboolean enabled) {
+    g_debug_verbose_viewport = (enabled == JNI_TRUE);
+    LOGI("Verbose viewport logging %s", g_debug_verbose_viewport ? "ENABLED" : "DISABLED");
 }
 
 // Performance monitoring and optimization function
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeOptimizeForPerformance(JNIEnv *env, jclass clazz, jint performance_level) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeOptimizeForPerformance(JNIEnv *env, jclass clazz, jint performance_level) {
     if (!g_projectm) {
         LOGE("ProjectM instance is null in nativeOptimizeForPerformance");
         return;
@@ -868,14 +1044,14 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOptimizeForPerformance(JN
 // Get device capabilities for Java side optimization
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeGetDeviceTier(JNIEnv *env, jclass clazz) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeGetDeviceTier(JNIEnv *env, jclass clazz) {
     return g_device_tier;
 }
 
 // Memory management function callable from Java
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeTrimMemory(JNIEnv *env, jclass clazz) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeTrimMemory(JNIEnv *env, jclass clazz) {
     optimize_memory_usage();
     LOGI("Memory trimming requested from Java");
 }
@@ -883,7 +1059,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeTrimMemory(JNIEnv *env, j
 // Set render resolution - this is what the UI controls actually affect
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetRenderResolution(JNIEnv *env, jclass clazz, jint width, jint height) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetRenderResolution(JNIEnv *env, jclass clazz, jint width, jint height) {
     LOGI("Setting render resolution to %dx%d", width, height);
     
     if (g_performance_mode) {
@@ -910,7 +1086,7 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetRenderResolution(JNIEn
 // Toggle performance mode from Java
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetPerformanceMode(JNIEnv *env, jclass clazz, jboolean enabled) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetPerformanceMode(JNIEnv *env, jclass clazz, jboolean enabled) {
     bool newMode = enabled == JNI_TRUE;
     if (newMode == g_performance_mode) return; // no change
     g_performance_mode = newMode;
@@ -933,14 +1109,14 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetPerformanceMode(JNIEnv
 // Getter so Java UI can reflect current native performance mode (after heuristics)
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeIsPerformanceModeEnabled(JNIEnv *env, jclass clazz) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeIsPerformanceModeEnabled(JNIEnv *env, jclass clazz) {
     return g_performance_mode ? JNI_TRUE : JNI_FALSE;
 }
 
 // Set target FPS hint from Java (currently only stored; hook into future adaptive logic)
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetTargetFPS(JNIEnv *env, jclass clazz, jint fps) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetTargetFPS(JNIEnv *env, jclass clazz, jint fps) {
     if (fps < 15) fps = 15;
     if (fps > 120) fps = 120;
     g_target_fps = fps;
@@ -950,7 +1126,113 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetTargetFPS(JNIEnv *env,
 // Toggle external framebuffer respect (allows disabling for debugging)
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetRespectExternalFramebuffer(JNIEnv* env, jclass clazz, jboolean enable) {
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetRespectExternalFramebuffer(JNIEnv* env, jclass clazz, jboolean enable) {
     projectm_set_respect_external_framebuffer(enable ? 1 : 0);
     LOGI("Respect external framebuffer: %s", (enable == JNI_TRUE) ? "ENABLED" : "DISABLED");
+}
+
+// Reload presets from a new root path (invoked by Java nativeReloadPresets)
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeReloadPresets(JNIEnv* env, jclass clazz, jstring jPath) {
+    if (!g_projectm) { LOGW("nativeReloadPresets called before projectM init"); return; }
+    const char* cpath = env->GetStringUTFChars(jPath, nullptr);
+    std::string path = cpath ? cpath : "";
+    env->ReleaseStringUTFChars(jPath, cpath);
+
+    // Micro-optimization: skip reload if playlist already populated and path unchanged
+    if (!g_last_preset_root.empty() && g_last_preset_root == path && g_playlist && projectm_playlist_size(g_playlist) > 0) {
+        LOGI("nativeReloadPresets: path unchanged (%s) and playlist populated (%u) -> skip", path.c_str(), projectm_playlist_size(g_playlist));
+        return;
+    }
+
+    g_last_preset_root = path;
+
+    if (g_playlist) { projectm_playlist_destroy(g_playlist); g_playlist = nullptr; }
+    g_playlist = projectm_playlist_create(g_projectm);
+    if (!g_playlist) { LOGE("Failed to recreate playlist"); return; }
+    projectm_playlist_set_shuffle(g_playlist, true);
+    bool ok = projectm_playlist_add_path(g_playlist, path.c_str(), true, false);
+    uint32_t count = projectm_playlist_size(g_playlist);
+    LOGI("Reloaded presets from %s (ok=%d, count=%u)", path.c_str(), ok ? 1 : 0, count);
+    if (count > 0) {
+        projectm_playlist_set_position(g_playlist, 0, true);
+    }
+}
+
+// Simple performance level API (1=low, 2=normal, 3=high)
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeSetPerformanceLevel(JNIEnv* env, jclass clazz, jint level) {
+    if (!g_projectm) {
+        LOGW("nativeSetPerformanceLevel called before projectM initialized");
+        return;
+    }
+
+    if (level < 1) level = 1;
+    if (level > 3) level = 3;
+    LOGI("Applying performance level %d", level);
+
+    switch (level) {
+        case 1: // Low
+            g_performance_mode = true;
+            g_memory_optimized = true;
+            g_render_width = 854;
+            g_render_height = 480;
+            projectm_set_preset_duration(g_projectm, 15);
+            projectm_set_soft_cut_duration(g_projectm, 2);
+            projectm_set_beat_sensitivity(g_projectm, 0.6f);
+            break;
+        case 2: // Normal
+            g_performance_mode = true;
+            g_memory_optimized = false;
+            g_render_width = 1280;
+            g_render_height = 720;
+            projectm_set_preset_duration(g_projectm, 25);
+            projectm_set_soft_cut_duration(g_projectm, 5);
+            projectm_set_beat_sensitivity(g_projectm, 0.8f);
+            break;
+        case 3: // High
+        default:
+            g_performance_mode = false;
+            g_memory_optimized = false;
+            projectm_set_preset_duration(g_projectm, 35);
+            projectm_set_soft_cut_duration(g_projectm, 10);
+            projectm_set_beat_sensitivity(g_projectm, 1.2f);
+            break;
+    }
+
+    if (g_display_width > 0 && g_display_height > 0) {
+        if (!g_performance_mode) {
+            cleanup_performance_fbo();
+            g_render_width = g_display_width;
+            g_render_height = g_display_height;
+            projectm_set_window_size(g_projectm, g_render_width, g_render_height);
+        } else {
+            if (g_upscale_program == 0) create_upscale_shader();
+            create_performance_fbo(g_render_width, g_render_height);
+            projectm_set_window_size(g_projectm, g_render_width, g_render_height);
+        }
+    }
+
+    LOGI("Performance level %d applied: perfMode=%s render=%dx%d display=%dx%d", level,
+         g_performance_mode ? "ON" : "OFF", g_render_width, g_render_height, g_display_width, g_display_height);
+}
+
+// Explicit on-demand native state dump callable from Java
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_johnneerdael_projectm_visualizer_ProjectMJNI_nativeDumpState(JNIEnv* env, jclass clazz) {
+    size_t playlist_size = g_playlist ? projectm_playlist_size(g_playlist) : 0;
+    size_t position = (g_playlist && playlist_size>0) ? projectm_playlist_get_position(g_playlist) : 0;
+    char* name = nullptr;
+    if (g_playlist && playlist_size>0) {
+        name = projectm_playlist_item(g_playlist, position);
+    }
+    LOGI("NATIVE_DUMP proj=%p playlist=%p presets=%zu pos=%zu name=%s disp=%dx%d render=%dx%d perf=%d fbo=%u es3=%d blit=%s escapes=%d lowMem=%d tier=%d", 
+         g_projectm, g_playlist, playlist_size, position, name?name:"<none>",
+         g_display_width, g_display_height, g_render_width, g_render_height, g_performance_mode?1:0,
+         g_fbo, g_has_es3?1:0, (!g_disable_blit_fastpath && g_has_es3 && p_glBlitFramebuffer)?"ON":"OFF", g_fbo_rebind_events,
+         g_memory_optimized?1:0, g_device_tier);
+    if (name) free(name);
 }

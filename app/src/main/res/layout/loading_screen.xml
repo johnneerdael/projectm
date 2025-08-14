@@ -34,7 +34,8 @@
             android:layout_width="250dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:indeterminate="true" />
+            android:indeterminate="true"
+            android:max="100" />
 
         <TextView
             android:id="@+id/loading_status"

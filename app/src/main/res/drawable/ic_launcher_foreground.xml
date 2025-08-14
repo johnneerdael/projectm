@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Foreground icon reused for splash animated icon (static) -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="0dp" android:insetTop="0dp" android:insetRight="0dp" android:insetBottom="0dp">
+    <vector
+        android:width="320dp"
+        android:height="180dp"
+        android:viewportWidth="320"
+        android:viewportHeight="180">
+        <path android:fillColor="#FF1B1B1B" android:pathData="M0,0h320v180H0z"/>
+        <path android:fillColor="#FF00FFFF" android:pathData="M100,60 L120,60 L140,90 L160,60 L180,60 L180,120 L165,120 L165,85 L150,110 L130,110 L115,85 L115,120 L100,120 Z"/>
+        <path android:fillColor="#FF00FF88" android:strokeColor="#FF00FFFF" android:strokeWidth="3" android:pathData="M60,90 Q80,70 100,90 T140,90 T180,90 T220,90 T260,90"/>
+    </vector>
+</inset>

@@ -8,4 +8,17 @@
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
     </style>
+
+    <!-- Pre-31: Launch just aliases legacy splash (API 31+ override adds SplashScreen attrs) -->
+    <style name="Theme.ProjectM.Launch" parent="Theme.ProjectM.Splash.Legacy"/>
+
+    <!-- Legacy pre-31 splash fallback using windowBackground -->
+    <style name="Theme.ProjectM.Splash.Legacy" parent="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">@drawable/splash_bg</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+    <!-- Post-splash main theme -->
+    <style name="Theme.ProjectM.Main" parent="Theme.Leanback" />
 </resources>

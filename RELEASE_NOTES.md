@@ -1,3 +1,34 @@
+# projectM Android TV 1.8.0-pre (Pre-Release) - Fingerprinted Preset Pipeline, Modern Splash & Deprecation Cleanup
+
+> Pre-release build: Large internal changes (asset pipeline, splash, rendering path heuristics). We're validating stability (no black screen regressions) and full preset enumeration before final 1.8.0.
+
+## 🚀 New in 1.8.0-pre
+
+- Fingerprint-based `presets.zip` extraction (SHA-256) with external override zip support (drop into external files dir)
+- Streaming, throttled unzip with incremental progress broadcasts (deterministic loading bar)
+- Non-blocking startup: engine initializes early; presets hot-reload on `ASSETS_READY`
+- Modern Android 12+ SplashScreen API with fade/scale exit animation
+- Immersive mode rewritten using `WindowInsetsControllerCompat` (deprecated flag block removed)
+- Performance mode toggle in overlay (offscreen FBO pipeline enable/disable) + native fallback on instability
+- Black frame detection & automatic perf-mode fallback heuristics
+- Reduced verbose viewport log spam; optional native verbose viewport toggle
+- Deprecation cleanup (Handlers, version queries) w/ minimal targeted suppressions
+- Zip Slip protection & `.nomedia` marker in extracted presets
+
+## 🧪 Pending / Known
+
+| Area | Status |
+|------|--------|
+| Intermittent black screen reports | Under validation – fallback logic active |
+| Preset count discrepancy (~731 vs expected) | Investigating duplicate filtering / playlist construction |
+| Heavy preset performance dips | Expected; performance mode + resolution options remain available |
+
+## Upgrade Notes
+
+First launch after install re-extracts presets (new fingerprint schema). Subsequent launches skip unless the SHA changes or override zip provided.
+
+---
+
 # projectM Android TV 1.6 - Complete Viewport Fix & Device-Tier Performance
 
 ## Revolutionary Viewport Resolution & Smart Performance Optimization

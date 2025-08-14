@@ -1,14 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.example.projectm.visualizer"
+    namespace "com.johnneerdael.projectm.visualizer"
     compileSdkVersion 34
     defaultConfig {
-        applicationId "com.example.projectm.visualizer"
+        applicationId "com.johnneerdael.projectm.visualizer"
         minSdkVersion 21
-        targetSdkVersion 34
-        versionCode 7
-        versionName "1.6"
+    targetSdkVersion 34
+    // 1.8 pre-release (fingerprint asset pipeline, splash, deprecation cleanup)
+    versionCode 8
+    versionName "1.8.0-pre"
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17"
@@ -18,6 +19,12 @@ android {
             abiFilters "armeabi-v7a", "arm64-v8a"
         }
     }
+    // Adopt Java 17 (LTS). Let Gradle use the current JDK (21) without forcing a toolchain download.
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    // If you want strict JDK provisioning later, reintroduce a toolchain block after installing JDK 17 locally.
     buildTypes {
         release {
             minifyEnabled false
@@ -30,9 +37,13 @@ android {
             version "3.22.1"
         }
     }
+    aaptOptions {
+        noCompress 'milk', 'prjm', 'zip'
+    }
 }
 
 dependencies {
     implementation 'androidx.leanback:leanback:1.0.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core-splashscreen:1.0.1'
 }
