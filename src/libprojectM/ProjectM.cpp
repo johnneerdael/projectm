@@ -41,9 +41,6 @@ namespace libprojectM {
 bool g_respect_external_framebuffer = false; // external linkage for use in other translation units
 int g_external_incoming_framebuffer = 0;    // captured each frame when enabled (int matches header)
 
-extern "C" PROJECTM_EXPORT void projectm_set_respect_external_framebuffer(int enable) {
-    g_respect_external_framebuffer = (enable != 0);
-}
 
 // Helper to (re)capture currently bound draw framebuffer at start of a frame
 static inline void pmCaptureIncomingFramebuffer() {
