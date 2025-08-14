@@ -22,6 +22,7 @@ add_library(projectM_main OBJECT
         PresetFileParser.hpp
         ProjectM.cpp
         ProjectM.hpp
+        ExternalFramebufferAPI.cpp
         ProjectMCWrapper.cpp
         ProjectMCWrapper.hpp
         TimeKeeper.cpp
