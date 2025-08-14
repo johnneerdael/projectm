@@ -386,12 +386,12 @@ auto ProjectM::UserSpriteIdentifiers() const -> std::vector<uint32_t>
 void ProjectM::SetPresetLocked(bool locked)
 {
     // Android TV: Enhanced preset lock with validation
-    if (locked && m_presetManager)
+    if (locked && m_presetFactoryManager)
     {
         // Validate current preset doesn't exceed Android TV limits
         try
         {
-            if (m_renderContext->viewportWidth > 3840 || m_renderContext->viewportHeight > 2160)
+            if (m_windowWidth > 3840 || m_windowHeight > 2160)
             {
                 locked = false; // Prevent locking incompatible presets
             }

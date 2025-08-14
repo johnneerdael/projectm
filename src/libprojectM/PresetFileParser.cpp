@@ -124,14 +124,13 @@ auto PresetFileParser::GetCode(const std::string& keyPrefix) const -> std::strin
         code << line << std::endl;
         ++lineCount;
     }
-    }
 
     auto codeStr = code.str();
 
     return codeStr;
 }
 
-auto PresetFileParser::GetInt(const std::string& key, int defaultValue) -> int
+auto libprojectM::PresetFileParser::GetInt(const std::string& key, int defaultValue) -> int
 {
     auto lowerKey = ToLower(key);
     if (m_presetValues.find(lowerKey) != m_presetValues.end())
@@ -148,7 +147,7 @@ auto PresetFileParser::GetInt(const std::string& key, int defaultValue) -> int
     return defaultValue;
 }
 
-auto PresetFileParser::GetFloat(const std::string& key, float defaultValue) -> float
+auto libprojectM::PresetFileParser::GetFloat(const std::string& key, float defaultValue) -> float
 {
     auto lowerKey = ToLower(key);
     if (m_presetValues.find(lowerKey) != m_presetValues.end())
@@ -165,12 +164,12 @@ auto PresetFileParser::GetFloat(const std::string& key, float defaultValue) -> f
     return defaultValue;
 }
 
-auto PresetFileParser::GetBool(const std::string& key, bool defaultValue) -> bool
+auto libprojectM::PresetFileParser::GetBool(const std::string& key, bool defaultValue) -> bool
 {
     return GetInt(key, static_cast<int>(defaultValue)) > 0;
 }
 
-auto PresetFileParser::GetString(const std::string& key, const std::string& defaultValue) -> std::string
+auto libprojectM::PresetFileParser::GetString(const std::string& key, const std::string& defaultValue) -> std::string
 {
     auto lowerKey = ToLower(key);
     if (m_presetValues.find(lowerKey) != m_presetValues.end())
@@ -181,12 +180,12 @@ auto PresetFileParser::GetString(const std::string& key, const std::string& defa
     return defaultValue;
 }
 
-const std::map<std::string, std::string>& PresetFileParser::PresetValues() const
+const std::map<std::string, std::string>& libprojectM::PresetFileParser::PresetValues() const
 {
     return m_presetValues;
 }
 
-void PresetFileParser::ParseLine(const std::string& line)
+void libprojectM::PresetFileParser::ParseLine(const std::string& line)
 {
     // Search for first delimiter, either space or equal
     auto varNameDelimiterPos = line.find_first_of(" =");
@@ -208,7 +207,7 @@ void PresetFileParser::ParseLine(const std::string& line)
     }
 }
 
-auto PresetFileParser::ToLower(std::string str) -> std::string
+auto libprojectM::PresetFileParser::ToLower(std::string str) -> std::string
 {
     std::transform(str.begin(), str.end(), str.begin(),
                    [](unsigned char c){ return std::tolower(c); }
