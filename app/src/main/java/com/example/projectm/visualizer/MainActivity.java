@@ -56,6 +56,7 @@ public class MainActivity extends Activity {
     private TextView helpText;
     private TextView fpsDisplay;
     private RadioGroup resolutionGroup;
+    private Switch performanceModeSwitch;
     
     // FPS monitoring for auto resolution adjustment
     private static final float FPS_TARGET = 24.0f;
@@ -405,7 +406,7 @@ public class MainActivity extends Activity {
             // Find overlay components
             overlayMenu = findViewById(R.id.overlay_menu);
             presetNameText = findViewById(R.id.preset_name);
-            autoChangeSwitch = findViewById(R.id.auto_change_switch);
+            // autoChangeSwitch = findViewById(R.id.auto_change_switch); // Commented out - not in current layout
             presetDurationSeekBar = findViewById(R.id.preset_duration_seekbar);
             presetDurationText = findViewById(R.id.preset_duration_text);
             transitionDurationSeekBar = findViewById(R.id.transition_duration_seekbar);
@@ -413,6 +414,7 @@ public class MainActivity extends Activity {
             helpText = findViewById(R.id.help_text);
             fpsDisplay = findViewById(R.id.fps_display);
             resolutionGroup = findViewById(R.id.resolution_group);
+            performanceModeSwitch = findViewById(R.id.performance_mode_switch);
             
             // Log UI component status
             Log.d(TAG, "UI components found: " + 
@@ -495,7 +497,9 @@ public class MainActivity extends Activity {
                         
                         if (renderer != null) {
                             renderer.setRenderResolution(width, height);
-                            Log.d(TAG, "Resolution changed to " + width + "x" + height);
+                            // Also call native method for FBO system
+                            ProjectMJNI.setRenderResolution(width, height);
+                            Log.d(TAG, "Resolution changed to " + width + "x" + height + " (both renderer and native)");
                             
                             // Save the selected resolution preference
                             prefs.edit().putInt(PREF_RESOLUTION, resolution).apply();
@@ -546,7 +550,9 @@ public class MainActivity extends Activity {
                     // Apply the resolution to the renderer
                     if (renderer != null) {
                         renderer.setRenderResolution(width, height);
-                        Log.d(TAG, "Applied saved resolution: " + width + "x" + height);
+                        // Also call native method for FBO system
+                        ProjectMJNI.setRenderResolution(width, height);
+                        Log.d(TAG, "Applied saved resolution: " + width + "x" + height + " (both renderer and native)");
                     }
                     
                     // Re-attach the listener
@@ -730,6 +736,19 @@ public class MainActivity extends Activity {
             // Hide overlay initially
             overlayMenu.setVisibility(View.GONE);
             helpText.setVisibility(View.VISIBLE);
+            
+            performanceModeSwitch = findViewById(R.id.performance_mode_switch);
+            if (performanceModeSwitch != null) {
+                // Initialize from native (after surface create this will reflect heuristic changes)
+                boolean nativePerf = true;
+                try { nativePerf = ProjectMJNI.isPerformanceModeEnabled(); } catch (Exception ignored) {}
+                performanceModeSwitch.setChecked(nativePerf);
+                performanceModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    Log.i(TAG, "UI Performance mode toggled: " + isChecked);
+                    ProjectMJNI.setPerformanceMode(isChecked);
+                    resetAutoHideTimer();
+                });
+            }
             
         } catch (Exception e) {
             Log.e(TAG, "Error initializing UI: " + e.getMessage(), e);
@@ -959,30 +978,41 @@ public class MainActivity extends Activity {
 
     private void initAudio() {
         try {
-            Log.d(TAG, "Initializing audio visualizer for system audio...");
+            Log.i(TAG, "=== Initializing audio visualizer for system audio ===");
+            
+            // Note: Visualizer.isSupported() is not available in Android API
+            // We'll attempt to create the visualizer directly and handle any exceptions
+            Log.i(TAG, "Attempting to create system audio visualizer");
             
             // Create visualizer with session ID 0 (system audio output)
+            Log.i(TAG, "Creating Visualizer with session ID 0 (system audio)");
             audioVisualizer = new Visualizer(0);
             
             if (audioVisualizer == null) {
                 Log.e(TAG, "Failed to create Visualizer instance");
                 return;
             }
+            Log.i(TAG, "Visualizer instance created successfully");
 
             // Get capture size
             int[] captureSizeRange = Visualizer.getCaptureSizeRange();
             int captureSize = captureSizeRange[1]; // Use maximum
-            Log.d(TAG, "Capture size range: " + captureSizeRange[0] + " - " + captureSizeRange[1]);
+            Log.i(TAG, "Capture size range: " + captureSizeRange[0] + " - " + captureSizeRange[1] + ", using: " + captureSize);
             
-            audioVisualizer.setCaptureSize(captureSize);
+            int result = audioVisualizer.setCaptureSize(captureSize);
+            Log.i(TAG, "setCaptureSize result: " + result + " (SUCCESS=" + Visualizer.SUCCESS + ")");
             
+            Log.i(TAG, "Setting up data capture listener...");
             audioVisualizer.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
                 @Override
                 public void onWaveFormDataCapture(Visualizer visualizer, byte[] waveform, int samplingRate) {
                     try {
                         if (waveform == null || waveform.length == 0) {
+                            Log.w(TAG, "Received null or empty waveform data");
                             return;
                         }
+                        
+                        Log.v(TAG, "Received waveform data: " + waveform.length + " bytes, sampling rate: " + samplingRate);
                         
                         short[] pcm = new short[waveform.length / 2];
                         for (int i = 0; i < pcm.length; i++) {
@@ -992,6 +1022,8 @@ public class MainActivity extends Activity {
                         if (visualizerView != null && visualizerView.getRenderer() != null) {
                             visualizerView.getRenderer().addPCMData(pcm, pcm.length);
                             visualizerView.requestRender();
+                        } else {
+                            Log.w(TAG, "VisualizerView or renderer is null, cannot process PCM data");
                         }
                     } catch (Exception e) {
                         Log.e(TAG, "Error processing waveform data: " + e.getMessage());
@@ -1004,11 +1036,12 @@ public class MainActivity extends Activity {
                 }
             }, Visualizer.getMaxCaptureRate() / 2, true, false);
 
-            int result = audioVisualizer.setEnabled(true);
-            if (result == Visualizer.SUCCESS) {
-                Log.i(TAG, "Audio visualizer enabled successfully");
+            Log.i(TAG, "Enabling audio visualizer...");
+            int result2 = audioVisualizer.setEnabled(true);
+            if (result2 == Visualizer.SUCCESS) {
+                Log.i(TAG, "=== Audio visualizer enabled successfully ===");
             } else {
-                Log.e(TAG, "Failed to enable audio visualizer, status code: " + result);
+                Log.e(TAG, "=== Failed to enable audio visualizer, status code: " + result2 + " ===");
             }
         } catch (Exception e) {
             Log.e(TAG, "Error initializing audio: " + e.getMessage(), e);

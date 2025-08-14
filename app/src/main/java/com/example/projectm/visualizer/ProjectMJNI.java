@@ -28,6 +28,7 @@ public class ProjectMJNI {
     private static native void nativeDestroy();
     private static native String nativeGetVersion();
     private static native int nativeGetPresetCount();
+    private static native void nativeSetTargetFPS(int fps);
     
     // Performance optimization methods
     private static native void nativeSetPerformanceLevel(int level);
@@ -35,6 +36,9 @@ public class ProjectMJNI {
     private static native void nativeOptimizeForPerformance(int performanceLevel);
     private static native int nativeGetDeviceTier();
     private static native void nativeTrimMemory();
+    private static native void nativeSetRenderResolution(int width, int height);
+    private static native void nativeSetPerformanceMode(boolean enabled);
+    private static native boolean nativeIsPerformanceModeEnabled();
 
     // Wrapped native method calls with logging
     public static void onSurfaceCreated(int windowWidth, int windowHeight, String assetPath) {
@@ -275,6 +279,44 @@ public class ProjectMJNI {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error setting viewport", e);
+        }
+    }
+    
+    // Set render resolution - this makes resolution controls actually work
+    public static void setRenderResolution(int width, int height) {
+        try {
+            Log.d(TAG, "Setting render resolution: " + width + "x" + height);
+            nativeSetRenderResolution(width, height);
+            Log.d(TAG, "Render resolution updated successfully");
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "Native render resolution setting not available");
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting render resolution", e);
+        }
+    }
+    
+    public static void setPerformanceMode(boolean enabled) {
+        try {
+            Log.d(TAG, "Toggling performance mode: " + enabled);
+            nativeSetPerformanceMode(enabled);
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "nativeSetPerformanceMode unavailable");
+        }
+    }
+    public static boolean isPerformanceModeEnabled() {
+        try {
+            return nativeIsPerformanceModeEnabled();
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "nativeIsPerformanceModeEnabled unavailable; defaulting true");
+            return true;
+        }
+    }
+
+    public static void setTargetFPS(int fps) {
+        try {
+            nativeSetTargetFPS(fps);
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "nativeSetTargetFPS unavailable");
         }
     }
 }

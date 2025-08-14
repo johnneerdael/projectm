@@ -817,4 +817,10 @@ public class VisualizerRenderer implements GLSurfaceView.Renderer {
     public DevicePerformance getDevicePerformance() {
         return devicePerformance;
     }
+
+    public void requestSurfaceResize() {
+        // Placeholder: GLSurfaceView will invoke onSurfaceChanged on actual resize; here we just log.
+        Log.d(TAG, "requestSurfaceResize invoked - forcing ProjectM to reconfigure on next frame");
+        // Could add a flag to trigger reconfiguration if needed.
+    }
 }

@@ -2,11 +2,19 @@
 #include <string>
 #include <android/log.h>
 #include <GLES2/gl2.h> // For glViewport
+#include <GLES2/gl2ext.h> // For FBO extensions
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#include <EGL/egl.h>
+#endif
 #include <sys/system_properties.h> // For system property detection
 #include <algorithm> // For std::transform
 #include <vector> // For std::vector
+#include <math.h> // For sine wave test audio
 #include "projectM-4/projectM.h"
 #include "projectM-4/playlist.h"
+// New API from integrated projectM source to keep external FBO bound
+extern "C" void projectm_set_respect_external_framebuffer(int enable);
 
 #define LOG_TAG "projectM-Native"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -24,6 +32,15 @@ enum DeviceTier {
 static int g_device_tier = MID_RANGE;
 static bool g_memory_optimized = false;
 static bool g_texture_compression_supported = false;
+
+// FBO-based performance mode globals
+// Performance mode (FBO based). Default ON for anything not clearly HIGH_END so we actually exercise it.
+static bool g_performance_mode = true;
+static GLuint g_fbo = 0;
+static GLuint g_fbo_texture = 0;
+static int g_render_width = 1920;
+static int g_render_height = 1080;
+static int g_target_fps = 60;
 
 projectm_handle g_projectm = nullptr;
 projectm_playlist_handle g_playlist = nullptr;
@@ -89,6 +106,302 @@ void detect_device_capabilities() {
          g_device_tier, g_is_high_end_device, g_is_low_memory_device, g_memory_optimized, g_texture_compression_supported);
 }
 
+// FBO management for performance mode
+void create_performance_fbo(int width, int height) {
+    if (g_fbo != 0) {
+        // Clean up existing FBO
+        glDeleteFramebuffers(1, &g_fbo);
+        glDeleteTextures(1, &g_fbo_texture);
+    }
+    
+    // Create FBO texture
+    glGenTextures(1, &g_fbo_texture);
+    glBindTexture(GL_TEXTURE_2D, g_fbo_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    // Create FBO
+    glGenFramebuffers(1, &g_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, g_fbo_texture, 0);
+    
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        LOGE("FBO creation failed with status: 0x%x", status);
+        glDeleteFramebuffers(1, &g_fbo);
+        glDeleteTextures(1, &g_fbo_texture);
+        g_fbo = 0;
+        g_fbo_texture = 0;
+        g_performance_mode = false;
+    } else {
+        LOGI("Created performance FBO %dx%d", width, height);
+    }
+    
+    // Restore default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void cleanup_performance_fbo() {
+    if (g_fbo != 0) {
+        glDeleteFramebuffers(1, &g_fbo);
+        glDeleteTextures(1, &g_fbo_texture);
+        g_fbo = 0;
+        g_fbo_texture = 0;
+        LOGI("Cleaned up performance FBO");
+    }
+}
+
+// Shader system for FBO upscaling
+static GLuint g_upscale_program = 0;
+static GLuint g_upscale_vao = 0;
+static GLuint g_upscale_vbo = 0;
+static bool g_has_es3 = false;
+static bool g_blit_initialized = false; // track if we logged blit usage
+// Function pointer for optional ES3 blit (avoid link-time dependency)
+typedef void (GL_APIENTRYP PFNGLBLITFRAMEBUFFERPROC)(GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLbitfield, GLenum);
+static PFNGLBLITFRAMEBUFFERPROC p_glBlitFramebuffer = nullptr;
+// Discard / invalidate support
+static bool g_has_discard_ext = false;        // GL_EXT_discard_framebuffer
+static bool g_discard_logged = false;         // one-time log when using discard
+static bool g_blit_error_logged = false;      // prevent spam if blit errors
+static bool g_disable_blit_fastpath = true;  // start disabled; can enable after validation
+static bool g_debug_inject_pattern = true;   // temporary debug aid: fill FBO if content missing
+static int  g_fbo_rebind_events = 0;         // count how often projectM escapes our FBO
+static const int kRebindDisableThreshold = 120; // after ~2 seconds at 60fps, abandon perf mode
+// Function pointer for discard extension (loaded at runtime)
+#ifndef PFNGLDISCARDFRAMEBUFFEREXTPROC
+typedef void (GL_APIENTRYP PFNGLDISCARDFRAMEBUFFEREXTPROC) (GLenum target, GLsizei numAttachments, const GLenum *attachments);
+#endif
+static PFNGLDISCARDFRAMEBUFFEREXTPROC p_glDiscardFramebufferEXT = nullptr;
+// ES3 invalidate function pointer (avoid direct link requirement)
+static PFNGLINVALIDATEFRAMEBUFFERPROC p_glInvalidateFramebuffer = nullptr;
+
+const char* vertex_shader_source = R"(
+#version 100
+attribute vec2 a_position;
+attribute vec2 a_texcoord;
+varying vec2 v_texcoord;
+void main() {
+    gl_Position = vec4(a_position, 0.0, 1.0);
+    v_texcoord = a_texcoord;
+}
+)";
+
+const char* fragment_shader_source = R"(
+#version 100
+precision mediump float;
+precision mediump sampler2D;
+uniform sampler2D u_texture;
+varying vec2 v_texcoord;
+void main() {
+    gl_FragColor = texture2D(u_texture, v_texcoord);
+}
+)";
+
+GLuint compile_shader(GLenum type, const char* source) {
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+    
+    GLint compiled;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (!compiled) {
+        GLint length;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+        char* log = new char[length];
+        glGetShaderInfoLog(shader, length, NULL, log);
+        LOGE("Shader compilation failed: %s", log);
+        delete[] log;
+        glDeleteShader(shader);
+        return 0;
+    }
+    return shader;
+}
+
+void create_upscale_shader() {
+    if (g_upscale_program != 0) {
+        glDeleteProgram(g_upscale_program);
+        g_upscale_program = 0;
+    }
+
+    GLuint vertex_shader = compile_shader(GL_VERTEX_SHADER, vertex_shader_source);
+    GLuint fragment_shader = compile_shader(GL_FRAGMENT_SHADER, fragment_shader_source);
+
+    if (vertex_shader == 0 || fragment_shader == 0) {
+        LOGE("Failed to compile upscale shaders");
+        return;
+    }
+
+    g_upscale_program = glCreateProgram();
+    glAttachShader(g_upscale_program, vertex_shader);
+    glAttachShader(g_upscale_program, fragment_shader);
+    glBindAttribLocation(g_upscale_program, 0, "a_position");
+    glBindAttribLocation(g_upscale_program, 1, "a_texcoord");
+    glLinkProgram(g_upscale_program);
+    
+    GLint linked;
+    glGetProgramiv(g_upscale_program, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        GLint length;
+        glGetProgramiv(g_upscale_program, GL_INFO_LOG_LENGTH, &length);
+        char* log = new char[length];
+        glGetProgramInfoLog(g_upscale_program, length, NULL, log);
+        LOGE("Shader linking failed: %s", log);
+        delete[] log;
+        glDeleteProgram(g_upscale_program);
+        g_upscale_program = 0;
+        return;
+    }
+    
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+    
+    // Create fullscreen quad
+    float quad_vertices[] = {
+        // positions   // texcoords
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f,  1.0f,  1.0f, 1.0f,
+    };
+    
+    glGenBuffers(1, &g_upscale_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, g_upscale_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vertices), quad_vertices, GL_STATIC_DRAW);
+    
+    LOGI("Created upscale shader program");
+}
+
+void render_fbo_to_screen() {
+    if (g_fbo_texture == 0) {
+        LOGE("Cannot render FBO to screen - missing texture");
+        return;
+    }
+
+    // Guard: skip until we have a valid surface size
+    if (g_display_width <= 0 || g_display_height <= 0) {
+        return;
+    }
+
+    // ES3 fast path: blit (saves shader + attribute setup). We need READ/DRAW framebuffers.
+    #if defined(GL_READ_FRAMEBUFFER) && defined(GL_DRAW_FRAMEBUFFER)
+    if (!g_disable_blit_fastpath && g_has_es3 && p_glBlitFramebuffer) {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, g_fbo);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_BLEND);
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_CULL_FACE);
+        p_glBlitFramebuffer(0, 0, g_render_width, g_render_height,
+                            0, 0, g_display_width, g_display_height,
+                            GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        GLenum blitErr = glGetError();
+        if (!g_blit_initialized) {
+            LOGI("Using ES3 blit fast path for upscale (err=0x%x)", blitErr);
+            g_blit_initialized = true;
+        }
+        if (blitErr != GL_NO_ERROR && !g_blit_error_logged) {
+            LOGW("Blit GL error=0x%x; disabling blit fast path", blitErr);
+            g_blit_error_logged = true;
+            g_disable_blit_fastpath = true;
+        }
+        // Optional post-blit discard of FBO color (content already resolved)
+        if ((g_has_es3 || g_has_discard_ext) && g_fbo != 0) {
+            glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+            const GLenum attachments[] = { GL_COLOR_ATTACHMENT0 };
+            if (g_has_es3 && p_glInvalidateFramebuffer) {
+                p_glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, attachments);
+            } else if (g_has_discard_ext && p_glDiscardFramebufferEXT) {
+                // Extension path (ES2)
+                p_glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, attachments);
+            }
+            if (!g_discard_logged) {
+                LOGI("Framebuffer color attachment discarded after upscale (mode=%s)", g_has_es3 ? "ES3_invalidate" : "EXT_discard");
+                g_discard_logged = true;
+            }
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+        return;
+    }
+    #endif
+
+    // ES2 shader fallback
+    if (g_upscale_program == 0) {
+        LOGE("Upscale shader program missing in ES2 fallback");
+        return;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, g_display_width, g_display_height);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE);
+    glUseProgram(g_upscale_program);
+    static GLint uTexLoc = -1;
+    if (uTexLoc == -1) uTexLoc = glGetUniformLocation(g_upscale_program, "u_texture");
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, g_fbo_texture);
+    glUniform1i(uTexLoc, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, g_upscale_vbo);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glUseProgram(0);
+
+    // Post-upscale discard for ES2 path (must re-bind FBO once we've sampled its texture)
+    if ((g_has_es3 || g_has_discard_ext) && g_fbo != 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+        const GLenum attachments[] = { GL_COLOR_ATTACHMENT0 };
+        if (g_has_es3 && p_glInvalidateFramebuffer) {
+            p_glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, attachments);
+        } else if (g_has_discard_ext && p_glDiscardFramebufferEXT) {
+            p_glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, attachments);
+        }
+        if (!g_discard_logged) {
+            LOGI("Framebuffer color attachment discarded after upscale (mode=%s)", g_has_es3 ? "ES3_invalidate" : "EXT_discard");
+            g_discard_logged = true;
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+}
+
+void update_performance_settings() {
+    if (g_performance_mode) {
+        // Use reduced resolution for rendering
+        switch (g_device_tier) {
+            case LOW_END:
+                g_render_width = 854;
+                g_render_height = 480;
+                break;
+            case MID_RANGE:
+                g_render_width = 1280;
+                g_render_height = 720;
+                break;
+            case HIGH_END:
+                g_render_width = 1600;
+                g_render_height = 900;
+                break;
+        }
+        LOGI("Performance mode: rendering at %dx%d", g_render_width, g_render_height);
+    } else {
+        // Use full resolution
+        g_render_width = g_display_width;
+        g_render_height = g_display_height;
+        LOGI("Quality mode: rendering at full %dx%d", g_render_width, g_render_height);
+    }
+}
+
 // Memory management for preset data caching
 static std::vector<std::string> g_preset_cache;
 static bool g_cache_initialized = false;
@@ -141,6 +454,9 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *
         LOGE("Failed to create projectM instance");
         return;
     }
+
+    // Enable respecting externally bound FBO (our performance mode offscreen target)
+    projectm_set_respect_external_framebuffer(1);
     
     // Apply performance-aware settings
     if (g_is_high_end_device) {
@@ -167,6 +483,38 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceCreated(JNIEnv *
     }
     
     LOGI("ProjectM instance created successfully with device-optimized settings");
+
+    // Disable dithering (bandwidth / perf win on most GPUs) once after context creation
+    glDisable(GL_DITHER);
+
+    // Detect GL version for ES3 features
+    const char* glver = (const char*)glGetString(GL_VERSION);
+    if (glver) {
+        g_has_es3 = (strstr(glver, "OpenGL ES 3") != nullptr);
+        LOGI("GL version string: %s (ES3=%d)", glver, g_has_es3 ? 1 : 0);
+        if (g_has_es3) {
+            p_glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)eglGetProcAddress("glBlitFramebuffer");
+            if (!p_glBlitFramebuffer) {
+                p_glBlitFramebuffer = (PFNGLBLITFRAMEBUFFERPROC)eglGetProcAddress("glBlitFramebufferEXT");
+            }
+            p_glInvalidateFramebuffer = (PFNGLINVALIDATEFRAMEBUFFERPROC)eglGetProcAddress("glInvalidateFramebuffer");
+            LOGI("ES3 blit proc %s", p_glBlitFramebuffer ? "resolved" : "NOT FOUND - fallback to shader");
+            LOGI("ES3 invalidate proc %s", p_glInvalidateFramebuffer ? "resolved" : "NOT FOUND - will skip invalidate");
+        }
+        // Extension string parsing for discard capability when not ES3
+        const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
+        if (extensions && strstr(extensions, "GL_EXT_discard_framebuffer")) {
+            g_has_discard_ext = true;
+            // Attempt to load function pointer
+            p_glDiscardFramebufferEXT = (PFNGLDISCARDFRAMEBUFFEREXTPROC)eglGetProcAddress("glDiscardFramebufferEXT");
+            LOGI("Detected GL_EXT_discard_framebuffer support (proc=%s)", p_glDiscardFramebufferEXT ? "resolved" : "MISSING");
+        }
+    }
+
+    // Auto performance mode heuristic: disable for explicit HIGH_END
+    if (g_is_high_end_device) {
+        g_performance_mode = false;
+    }
 
     // Create playlist and connect it to projectM
     g_playlist = projectm_playlist_create(g_projectm);
@@ -201,59 +549,102 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnSurfaceChanged(JNIEnv *env, jclass clazz,
                                                                         jint width, jint height) {
-    LOGI("Surface changed - requested render size: %dx%d, display size: %dx%d", width, height, g_display_width, g_display_height);
-    if (g_projectm) {
-        // CRITICAL FIX: Always set ProjectM to render at FULL display resolution
-        // This ensures presets fill the entire screen regardless of performance settings
-        int render_width = (g_display_width > 0) ? g_display_width : width;
-        int render_height = (g_display_height > 0) ? g_display_height : height;
-        
-        projectm_set_window_size(g_projectm, render_width, render_height);
-        glViewport(0, 0, render_width, render_height);
-        
-        LOGI("ProjectM set to FULL display resolution: %dx%d (requested was %dx%d)", 
-             render_width, render_height, width, height);
-        
-        // Performance optimization is now handled through other settings:
-        // - Preset complexity
-        // - Frame rate limiting 
-        // - Texture quality
-        // - Effect count
-        // But the viewport always fills the full screen
-    } else {
+    LOGI("Surface changed - display size: %dx%d", width, height);
+    
+    // Store display dimensions
+    g_display_width = width;
+    g_display_height = height;
+    
+    if (!g_projectm) {
         LOGE("ProjectM instance is null in surfaceChanged");
+        return;
     }
+
+    update_performance_settings();
+
+    if (g_performance_mode && g_upscale_program == 0) {
+        create_upscale_shader();
+    }
+
+    if (g_performance_mode) {
+        create_performance_fbo(g_render_width, g_render_height);
+    } else {
+        cleanup_performance_fbo();
+    }
+
+    projectm_set_window_size(g_projectm, g_render_width, g_render_height);
+    LOGI("ProjectM configured: render=%dx%d display=%dx%d perf=%s FBO=%s es3=%d blit=%s discard=%s", 
+         g_render_width, g_render_height, width, height,
+         g_performance_mode ? "ON" : "OFF",
+         (g_performance_mode && g_fbo != 0) ? "ACTIVE" : "DISABLED",
+         g_has_es3 ? 1 : 0,
+         (!g_disable_blit_fastpath && g_has_es3 && p_glBlitFramebuffer) ? "ON" : "OFF",
+         ( (g_has_es3 && p_glInvalidateFramebuffer) || (g_has_discard_ext && p_glDiscardFramebufferEXT) ) ? "ON" : "OFF");
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_projectm_visualizer_ProjectMJNI_nativeOnDrawFrame(JNIEnv *env, jclass clazz) {
-    if (g_projectm) {
-        // Store current viewport before rendering
-        GLint viewport[4];
-        glGetIntegerv(GL_VIEWPORT, viewport);
-        
-        // Ensure viewport is set to display size before ProjectM renders
-        if (g_display_width > 0 && g_display_height > 0) {
-            glViewport(0, 0, g_display_width, g_display_height);
-        }
-        
+    if (!g_projectm) return;
+    if (g_display_width <= 0 || g_display_height <= 0) return; // wait for valid surface
+
+    if (g_performance_mode && g_fbo != 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+        glViewport(0, 0, g_render_width, g_render_height);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT); // no depth clear (no depth attachment)
+        GLint fbBefore = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbBefore);
         projectm_opengl_render_frame(g_projectm);
-        
-        // Aggressively restore viewport to full display size after ProjectM renders
-        // ProjectM might change the viewport during rendering, so we reset it
-        if (g_display_width > 0 && g_display_height > 0) {
-            glViewport(0, 0, g_display_width, g_display_height);
+        GLint fbAfter = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbAfter);
+        if (fbAfter != (GLint)g_fbo) {
+            LOGW("projectM changed framebuffer binding (before=%d after=%d expected=%u) - restoring", fbBefore, fbAfter, g_fbo);
+            glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+            g_fbo_rebind_events++;
+            // Attempt a SECOND render pass to actually get content into our FBO.
+            // This doubles work only on frames where projectM escaped.
+            projectm_opengl_render_frame(g_projectm);
+            GLint fbAfterSecond = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbAfterSecond);
+            if (fbAfterSecond != (GLint)g_fbo) {
+                // Still escaped; optionally inject a debug pattern so we at least see something and know upscale path works
+                if (g_debug_inject_pattern) {
+                    glBindFramebuffer(GL_FRAMEBUFFER, g_fbo);
+                    // Simple 2-color vertical bars pattern using glClear + scissor
+                    glDisable(GL_SCISSOR_TEST);
+                    glClearColor(1.0f, 0.0f, 1.0f, 1.0f); // magenta
+                    glClear(GL_COLOR_BUFFER_BIT);
+                }
+            }
+            if (g_fbo_rebind_events == 10) {
+                LOGW("projectM is frequently unbinding our FBO (10 events) - performance benefit may be negated");
+            }
+            if (g_fbo_rebind_events >= kRebindDisableThreshold) {
+                LOGW("Disabling performance mode automatically after %d FBO escapes", g_fbo_rebind_events);
+                g_performance_mode = false;
+                // Fall back: cleanup FBO so subsequent frames go direct
+                cleanup_performance_fbo();
+                // Reconfigure projectM to full size
+                projectm_set_window_size(g_projectm, g_display_width, g_display_height);
+            }
+        }
+        if (g_performance_mode) {
+            render_fbo_to_screen();
         } else {
-            // Fallback to stored viewport
-            glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+            // We disabled perf mode this frame; draw directly now.
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, g_display_width, g_display_height);
+            projectm_opengl_render_frame(g_projectm); // one more direct render ensures visible frame
         }
-        
-        // Memory optimization: periodic cleanup on low-end devices
-        static int frame_count = 0;
-        if (g_memory_optimized && (++frame_count % 600) == 0) { // Every ~10 seconds at 60fps
-            optimize_memory_usage();
-        }
+    } else {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, g_display_width, g_display_height);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        projectm_opengl_render_frame(g_projectm);
+    }
+
+    static int frame_count = 0;
+    if (g_memory_optimized && (++frame_count % 600) == 0) {
+        optimize_memory_usage();
     }
 }
 
@@ -395,6 +786,10 @@ Java_com_example_projectm_visualizer_ProjectMJNI_nativeDestroy(JNIEnv *env, jcla
         projectm_destroy(g_projectm);
         g_projectm = nullptr;
     }
+    // GL cleanup
+    cleanup_performance_fbo();
+    if (g_upscale_program) { glDeleteProgram(g_upscale_program); g_upscale_program = 0; }
+    if (g_upscale_vbo) { glDeleteBuffers(1, &g_upscale_vbo); g_upscale_vbo = 0; }
 }
 
 extern "C"
@@ -424,13 +819,9 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetViewport(JNIEnv *env, jclass clazz, 
                                                                   jint x, jint y, jint width, jint height) {
-    // Store display dimensions for later use
-    g_display_width = width;
-    g_display_height = height;
-    
-    // Set OpenGL viewport directly - this ensures the visualization is stretched to fit the full screen
+    // Intentionally do NOT overwrite canonical display size here; surfaceChanged owns it.
     glViewport(x, y, width, height);
-    LOGI("Native setViewport called and stored: %d,%d %dx%d", x, y, width, height);
+    LOGI("Native setViewport called (no dimension store): %d,%d %dx%d", x, y, width, height);
 }
 
 // Performance monitoring and optimization function
@@ -487,4 +878,79 @@ JNIEXPORT void JNICALL
 Java_com_example_projectm_visualizer_ProjectMJNI_nativeTrimMemory(JNIEnv *env, jclass clazz) {
     optimize_memory_usage();
     LOGI("Memory trimming requested from Java");
+}
+
+// Set render resolution - this is what the UI controls actually affect
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetRenderResolution(JNIEnv *env, jclass clazz, jint width, jint height) {
+    LOGI("Setting render resolution to %dx%d", width, height);
+    
+    if (g_performance_mode) {
+        // In performance mode, manually override the render resolution
+        g_render_width = width;
+        g_render_height = height;
+        
+        // Recreate FBO with new resolution
+        if (g_fbo != 0) {
+            create_performance_fbo(g_render_width, g_render_height);
+        }
+        
+        if (g_projectm) {
+            projectm_set_window_size(g_projectm, g_render_width, g_render_height);
+        }
+        
+        LOGI("Performance mode: updated render resolution to %dx%d", g_render_width, g_render_height);
+    } else {
+        // In quality mode, resolution changes don't affect render size (always full res)
+        LOGI("Quality mode active: render resolution remains at display size %dx%d", g_display_width, g_display_height);
+    }
+}
+
+// Toggle performance mode from Java
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetPerformanceMode(JNIEnv *env, jclass clazz, jboolean enabled) {
+    bool newMode = enabled == JNI_TRUE;
+    if (newMode == g_performance_mode) return; // no change
+    g_performance_mode = newMode;
+    LOGI("Performance mode toggled: %s", g_performance_mode ? "ON" : "OFF");
+    // Re-run sizing logic if we already have a surface
+    if (g_display_width > 0 && g_display_height > 0 && g_projectm) {
+        update_performance_settings();
+        if (g_performance_mode) {
+            if (g_upscale_program == 0) create_upscale_shader();
+            create_performance_fbo(g_render_width, g_render_height);
+        } else {
+            cleanup_performance_fbo();
+            // Switch projectM back to full size
+            projectm_set_window_size(g_projectm, g_display_width, g_display_height);
+        }
+        projectm_set_window_size(g_projectm, g_render_width, g_render_height);
+    }
+}
+
+// Getter so Java UI can reflect current native performance mode (after heuristics)
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_example_projectm_visualizer_ProjectMJNI_nativeIsPerformanceModeEnabled(JNIEnv *env, jclass clazz) {
+    return g_performance_mode ? JNI_TRUE : JNI_FALSE;
+}
+
+// Set target FPS hint from Java (currently only stored; hook into future adaptive logic)
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetTargetFPS(JNIEnv *env, jclass clazz, jint fps) {
+    if (fps < 15) fps = 15;
+    if (fps > 120) fps = 120;
+    g_target_fps = fps;
+    LOGI("Native target FPS set to %d", g_target_fps);
+}
+
+// Toggle external framebuffer respect (allows disabling for debugging)
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_projectm_visualizer_ProjectMJNI_nativeSetRespectExternalFramebuffer(JNIEnv* env, jclass clazz, jboolean enable) {
+    projectm_set_respect_external_framebuffer(enable ? 1 : 0);
+    LOGI("Respect external framebuffer: %s", (enable == JNI_TRUE) ? "ENABLED" : "DISABLED");
 }

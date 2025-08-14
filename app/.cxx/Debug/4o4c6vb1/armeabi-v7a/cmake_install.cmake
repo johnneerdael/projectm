@@ -1,4 +1,4 @@
-# Install script for directory: /Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/src/main/cpp
+# Install script for directory: /Users/jneerdaekl/Scripts/projectm-android-tv/app/src/main/cpp
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/Users/jneerdaekl/Scripts/projectm/projectm-android-tv/app/.cxx/Debug/4o4c6vb1/armeabi-v7a/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/Users/jneerdaekl/Scripts/projectm-android-tv/app/.cxx/Debug/4o4c6vb1/armeabi-v7a/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

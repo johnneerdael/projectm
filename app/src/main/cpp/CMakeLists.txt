@@ -6,6 +6,7 @@ project(projectmtv)
 find_library(log-lib log)
 find_library(GLESv2-lib GLESv2)
 find_library(android-lib android)
+find_library(egl-lib EGL)
 
 # Add prebuilt projectM libraries
 add_library(projectM-4 SHARED IMPORTED)
@@ -34,6 +35,7 @@ target_link_libraries(projectmtv
     projectM-4-playlist
     ${log-lib}
     ${GLESv2-lib}
+    ${egl-lib}
     ${android-lib}
 )
 
