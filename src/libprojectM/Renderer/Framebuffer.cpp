@@ -389,6 +389,10 @@ void Framebuffer::RemoveDepthStencilAttachment(int framebufferIndex)
 
 void Framebuffer::MaskDrawBuffer(int bufferIndex, bool masked)
 {
+#ifdef USE_GLES
+    // bufferIndex is unused in OpenGL ES as there's only one color buffer
+    (void)bufferIndex;
+#endif
     // Invert the flag, as "true" means the color channel *will* be written.
     auto glMasked = static_cast<GLboolean>(!masked);
 #ifdef USE_GLES

@@ -67,9 +67,9 @@ void CustomShape::InitVertexAttrib()
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr); // points
     glDisableVertexAttribArray(1);
 
-    std::vector<Point> vertexData;
+    std::vector<RenderItem::Point> vertexData;
     vertexData.resize(100);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * vertexData.size(), vertexData.data(), GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RenderItem::Point) * vertexData.size(), vertexData.data(), GL_STREAM_DRAW);
 }
 
 void CustomShape::Initialize(::libprojectM::PresetFileParser& parsedFile, int index)
@@ -328,12 +328,14 @@ void CustomShape::Draw()
                 }
 
                 // Android TV: GL_LINE_LOOP compatibility fix - use GL_LINE_STRIP with duplicated first vertex
-                std::vector<Point> loopPoints;
+                std::vector<RenderItem::Point> loopPoints;
                 loopPoints.reserve(sides + 1);
-                loopPoints.insert(loopPoints.end(), points.begin(), points.begin() + sides);
-                loopPoints.push_back(points[0]); // Close the loop
+                for (int j = 0; j < sides; ++j) {
+                    loopPoints.emplace_back(points[j].x, points[j].y);
+                }
+                loopPoints.emplace_back(points[0].x, points[0].y); // Close the loop
                 
-                glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizei>(sizeof(Point) * (sides + 1)), loopPoints.data());
+                glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizei>(sizeof(RenderItem::Point) * (sides + 1)), loopPoints.data());
                 glDrawArrays(GL_LINE_STRIP, 0, sides + 1);
             }
         }
