@@ -119,10 +119,24 @@ void PresetTransition::Draw(const Preset& oldPreset,
         textureUnit++;
     }
 
+    // Android TV: Disable depth test for fullscreen transition quads to avoid depth ops
+    // on surfaces without depth
+    GLboolean depthTestWasEnabled = glIsEnabled(GL_DEPTH_TEST);
+    if (depthTestWasEnabled)
+    {
+        glDisable(GL_DEPTH_TEST);
+    }
+
     // Render the transition quad
     glBindVertexArray(m_vaoID);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
+
+    // Android TV: Restore depth test state
+    if (depthTestWasEnabled)
+    {
+        glEnable(GL_DEPTH_TEST);
+    }
 
     // Clean up
     oldPreset.OutputTexture()->Unbind(0);

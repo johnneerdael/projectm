@@ -92,7 +92,9 @@ void Framebuffer::BindDraw(int framebufferIndex)
 
 void Framebuffer::Unbind()
 {
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    // Android TV: Reset READ & DRAW binding states to prevent stale read bindings
+    // affecting blits/resolves - use GL_FRAMEBUFFER to reset both
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 bool Framebuffer::SetSize(int width, int height)
@@ -407,51 +409,27 @@ void Framebuffer::UpdateDrawBuffers(int framebufferIndex)
 
     std::vector<GLenum> buffers;
 
-    bool hasDepthAttachment = false;
-    bool hasStencilAttachment = false;
-    bool hasDepthStencilAttachment = false;
-
+    // Android TV: Only include COLOR attachments in draw buffers list
+    // Never include GL_DEPTH_ATTACHMENT/GL_STENCIL_ATTACHMENT in glDrawBuffers
     for (const auto& attachment : attachments)
     {
-        if (attachment.first != GL_DEPTH_ATTACHMENT &&
-            attachment.first != GL_STENCIL_ATTACHMENT &&
-            attachment.first != GL_DEPTH_STENCIL_ATTACHMENT)
+        // Only add color attachments to draw buffers
+        if (attachment.first >= GL_COLOR_ATTACHMENT0 && attachment.first <= GL_COLOR_ATTACHMENT31)
         {
             buffers.push_back(attachment.first);
         }
-        else
-        {
-            switch (attachment.first)
-            {
-                case GL_DEPTH_ATTACHMENT:
-                    hasDepthAttachment = true;
-                    break;
-                case GL_STENCIL_ATTACHMENT:
-                    hasStencilAttachment = true;
-                    break;
-                case GL_DEPTH_STENCIL_ATTACHMENT:
-                    hasDepthStencilAttachment = true;
-                    break;
-                default:
-                    break;
-            }
-        }
     }
 
-    if (hasDepthAttachment)
+    // Android TV: If no color targets, pass GL_NONE
+    if (buffers.empty())
     {
-        buffers.push_back(GL_DEPTH_ATTACHMENT);
+        GLenum noneBuffer = GL_NONE;
+        glDrawBuffers(1, &noneBuffer);
     }
-    if (hasStencilAttachment)
+    else
     {
-        buffers.push_back(GL_STENCIL_ATTACHMENT);
+        glDrawBuffers(static_cast<GLsizei>(buffers.size()), buffers.data());
     }
-    if (hasDepthStencilAttachment)
-    {
-        buffers.push_back(GL_DEPTH_STENCIL_ATTACHMENT);
-    }
-
-    glDrawBuffers(static_cast<GLsizei>(buffers.size()), buffers.data());
 }
 
 void Framebuffer::RemoveAttachment(int framebufferIndex, GLenum attachmentType)

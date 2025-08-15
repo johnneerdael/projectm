@@ -440,6 +440,17 @@ void projectMSDL::renderFrame()
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // Android TV: Validate default framebuffer depth/stencil configuration
+    GLint depthBits = 0, stencilBits = 0;
+    glGetIntegerv(GL_DEPTH_BITS, &depthBits);
+    glGetIntegerv(GL_STENCIL_BITS, &stencilBits);
+    
+    static bool loggedOnce = false;
+    if (!loggedOnce) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Default FB: depth=%d stencil=%d", depthBits, stencilBits);
+        loggedOnce = true;
+    }
+
     projectm_opengl_render_frame(_projectM);
 
     SDL_GL_SwapWindow(_sdlWindow);

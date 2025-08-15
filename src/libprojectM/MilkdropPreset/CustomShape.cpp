@@ -130,7 +130,8 @@ void CustomShape::Draw()
 
     glEnable(GL_BLEND);
 
-    for (int instance = 0; instance < m_instances; instance++)
+    // Android TV: Enhanced constraints and validation
+    for (int instance = 0; instance < std::min(m_instances, 16); instance++) // Limit instances for Android TV
     {
         m_perFrameContext.LoadStateVariables(m_presetState, *this, instance);
         m_perFrameContext.ExecutePerFrameCode();
@@ -140,9 +141,10 @@ void CustomShape::Draw()
         {
             sides = 3;
         }
-        if (sides > 100)
+        // Android TV: More conservative vertex limit for shapes
+        if (sides > 32)
         {
-            sides = 100;
+            sides = 32;
         }
 
         // Additive Drawing or Overwrite
@@ -325,8 +327,14 @@ void CustomShape::Draw()
                         break;
                 }
 
-                glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizei>(sizeof(Point) * sides), points.data());
-                glDrawArrays(GL_LINE_LOOP, 0, sides);
+                // Android TV: GL_LINE_LOOP compatibility fix - use GL_LINE_STRIP with duplicated first vertex
+                std::vector<Point> loopPoints;
+                loopPoints.reserve(sides + 1);
+                loopPoints.insert(loopPoints.end(), points.begin(), points.begin() + sides);
+                loopPoints.push_back(points[0]); // Close the loop
+                
+                glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizei>(sizeof(Point) * (sides + 1)), loopPoints.data());
+                glDrawArrays(GL_LINE_STRIP, 0, sides + 1);
             }
         }
     }
