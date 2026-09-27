@@ -1,0 +1,76 @@
+{
+  "track": "1926 - Rainy Melody (Original Mix)",
+  "excerpt_seconds": [
+    60,
+    80
+  ],
+  "frame_count": 600,
+  "sample_rate": 44100,
+  "fps": 30,
+  "width": 256,
+  "height": 144,
+  "measurement_frames": [
+    120,
+    600
+  ],
+  "audio_u8_sha256": "2ea5c0a0d00b588346360a934dab11860d658d3fe0d82572bc26957cd0f75f25",
+  "presets": [
+    "ORB - Burnt Ice --- Isosceles edit.milk",
+    "martin - city lights.milk",
+    "Blendin to myself AdamFX Twist 2 martin - glassball dance with Cope.milk",
+    "martin - pixies party filth edition.milk",
+    "martin - elusive impressions mix2.milk"
+  ],
+  "runs": [
+    {
+      "preset_index": 0,
+      "mode": "before",
+      "exit": 0
+    },
+    {
+      "preset_index": 0,
+      "mode": "fixed",
+      "exit": 0
+    },
+    {
+      "preset_index": 1,
+      "mode": "before",
+      "exit": 0
+    },
+    {
+      "preset_index": 1,
+      "mode": "fixed",
+      "exit": 0
+    },
+    {
+      "preset_index": 2,
+      "mode": "before",
+      "exit": 0
+    },
+    {
+      "preset_index": 2,
+      "mode": "fixed",
+      "exit": 0
+    },
+    {
+      "preset_index": 3,
+      "mode": "before",
+      "exit": 0
+    },
+    {
+      "preset_index": 3,
+      "mode": "fixed",
+      "exit": 0
+    },
+    {
+      "preset_index": 4,
+      "mode": "before",
+      "exit": 0
+    },
+    {
+      "preset_index": 4,
+      "mode": "fixed",
+      "exit": 0
+    }
+  ]
+}

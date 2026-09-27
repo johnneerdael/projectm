@@ -1,0 +1,20 @@
+[
+  {
+    "preset": "ORB - Burnt Ice --- Isosceles edit.milk",
+    "stage": "precedence only; old result type and integer casts retained",
+    "difference_from_full_fix_pct": 15.851550805658151,
+    "lit_pct": 0.0003334327980324074
+  },
+  {
+    "preset": "martin - city lights.milk",
+    "stage": "precedence only; old result type and integer casts retained",
+    "difference_from_full_fix_pct": 0.13658627815034194,
+    "lit_pct": 72.10406833224826
+  },
+  {
+    "preset": "martin - elusive impressions mix2.milk",
+    "stage": "precedence only; old result type and integer casts retained",
+    "difference_from_full_fix_pct": 2.066558106532544,
+    "lit_pct": 95.93032271773727
+  }
+]

@@ -1,0 +1,37 @@
+[
+  {
+    "preset": "ORB - Burnt Ice --- Isosceles edit.milk",
+    "before_lit_pct": 0.00965259693287037,
+    "fixed_lit_pct": 54.87585562246817,
+    "mean_difference_pct": 15.859377024162772,
+    "changed_screen_pct": 52.71306355794271
+  },
+  {
+    "preset": "martin - city lights.milk",
+    "before_lit_pct": 72.10974799262154,
+    "fixed_lit_pct": 72.08697848849826,
+    "mean_difference_pct": 0.3761807813161916,
+    "changed_screen_pct": 1.3880242241753473
+  },
+  {
+    "preset": "Blendin to myself AdamFX Twist 2 martin - glassball dance with Cope.milk",
+    "before_lit_pct": 96.08730740017361,
+    "fixed_lit_pct": 96.08730740017361,
+    "mean_difference_pct": 0.0,
+    "changed_screen_pct": 0.0
+  },
+  {
+    "preset": "martin - pixies party filth edition.milk",
+    "before_lit_pct": 92.74663854528356,
+    "fixed_lit_pct": 92.74663854528356,
+    "mean_difference_pct": 0.0,
+    "changed_screen_pct": 0.0
+  },
+  {
+    "preset": "martin - elusive impressions mix2.milk",
+    "before_lit_pct": 99.58333333333333,
+    "fixed_lit_pct": 95.93137387876158,
+    "mean_difference_pct": 17.484517267615477,
+    "changed_screen_pct": 73.2662907353154
+  }
+]

@@ -1,0 +1,51 @@
+GL 4.1 Metal - 89.4 / Apple M4 Pro
+TRACE frame=0 bass=10 q1=0 q3=1 basstime=0
+UNSUPPORTED (log once): POSSIBLE ISSUE: unit 1 GLD_TEXTURE_INDEX_2D is unloadable and bound to sampler type (Float) - using zero texture because texture unloadable
+WAVE frame=0 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+render_error=0
+capture_error=0
+TRACE frame=1 bass=4.61591 q1=0 q3=1 basstime=0
+WAVE frame=1 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=2 bass=3.59416 q1=0 q3=1 basstime=0
+WAVE frame=2 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=3 bass=2.88167 q1=0 q3=1 basstime=0
+WAVE frame=3 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=30 bass=0.737742 q1=0 q3=1 basstime=0
+WAVE frame=30 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=60 bass=0.577418 q1=0 q3=1 basstime=0
+WAVE frame=60 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=90 bass=0.408812 q1=0 q3=1 basstime=0
+WAVE frame=90 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=120 bass=0.783786 q1=0 q3=1 basstime=0
+WAVE frame=120 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=150 bass=1.03374 q1=0 q3=0 basstime=0
+WAVE frame=150 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=180 bass=0.665481 q1=0 q3=0 basstime=0
+WAVE frame=180 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=210 bass=0.378318 q1=0 q3=0 basstime=0
+WAVE frame=210 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=240 bass=1.21451 q1=0 q3=0 basstime=0
+WAVE frame=240 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=270 bass=1.43866 q1=0 q3=1 basstime=0
+WAVE frame=270 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=300 bass=1.05308 q1=0 q3=1 basstime=0
+WAVE frame=300 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=330 bass=5.17099 q1=0 q3=1 basstime=0
+WAVE frame=330 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=360 bass=1.02251 q1=0 q3=0 basstime=0
+WAVE frame=360 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=390 bass=0.946315 q1=0 q3=0 basstime=0
+WAVE frame=390 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=420 bass=0.451617 q1=0 q3=0 basstime=0
+WAVE frame=420 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=450 bass=1.435 q1=0 q3=0 basstime=0
+WAVE frame=450 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=480 bass=0.862093 q1=0 q3=1 basstime=0
+WAVE frame=480 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=510 bass=0.770436 q1=0 q3=1 basstime=0
+WAVE frame=510 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=540 bass=0.485834 q1=0 q3=1 basstime=0
+WAVE frame=540 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+TRACE frame=570 bass=1.06699 q1=0 q3=1 basstime=0
+WAVE frame=570 q1=0 x=-0.0115,0.0115 y=-1.70667,1.77778 inside=116 finite=200
+frames=600 gl_error_frames=0
