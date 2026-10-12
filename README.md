@@ -82,11 +82,13 @@ of each produced the same set of frames on both sides (upstream 2c9354…, 14ed9
 2c9354…, 2c68e0…, 586cea…, the frame upstream gave in the retest). 12 upstream repeats in the main run
 were byte-identical.
 
-**Cost** (`data/timing.json`; 4K, lines-only build, median frame time of frames 60–239 with `glFinish`
-around each frame, two runs each, upstream → PR): Flexi - alien complex 03 (outlined shapes)
-14.8/15.8 → 14.8/15.5 ms; Fvese-mvfun2 (64×48 motion vectors) 3.74/3.79 → 3.83/3.81 ms; Bdrv yin -
-315 (custom waves) 5.21/4.97 → 5.07/4.82 ms; Royal - Mashup (103) 3.54/3.56 → 1.89/1.87 ms (the sample
-count rule draws a third of the waveform points at 4K). Desktop numbers only.
+**Cost** (`data/timing.json`; 4K, median frame time of frames 60–239 with `glFinish` around each
+frame, two runs each, upstream → this PR): Flexi - alien complex 03 (outlined shapes) 16.03/16.43 →
+16.28/16.26 ms; Fvese-mvfun2 (64×48 motion vectors) 3.85/3.74 → 3.98/3.91 ms; Bdrv yin - 315 (custom
+waves) 5.07/5.03 → 5.03/5.03 ms; Royal - Mashup (103) 3.94/3.68 → 1.99/1.92 ms (the sample count rule
+draws a third of the waveform points at 4K); fat cancer tour meant t nz+ (blur) 3.35/3.38 → 3.21/3.27 ms;
+TonyMilkdrop - Nuclear (blur) 3.05/3.06 → 2.92/2.97 ms. The lines-only build's numbers are kept in the
+same file. Desktop numbers only.
 
 ## Images
 
