@@ -1,45 +1,60 @@
 [
  {
-  "preset": "$$$ Royal - Mashup (255).milk",
+  "preset": "$$$ Royal - Mashup (220).milk",
   "master": [
-   "06eb0b30a715",
-   "06eb0b30a715",
-   "06eb0b30a715"
+   "586cea13fb76",
+   "586cea13fb76",
+   "586cea13fb76"
   ],
   "off": [
-   "2b9c0f5e1fe9",
-   "06eb0b30a715",
-   "06eb0b30a715"
+   "2c9354341499",
+   "2c9354341499",
+   "2c9354341499"
+  ],
+  "master_repeatable": true,
+  "overlap": false
+ },
+ {
+  "preset": "$$$ Royal - Mashup (316) --- Isosceles edit.milk",
+  "master": [
+   "4b3ad86d6dd7",
+   "4b3ad86d6dd7",
+   "4b3ad86d6dd7"
+  ],
+  "off": [
+   "abe84d6f416e",
+   "abe84d6f416e",
+   "4b3ad86d6dd7"
   ],
   "master_repeatable": true,
   "overlap": true
  },
  {
-  "preset": "$$$ Royal - Mashup (389).milk",
+  "preset": "$$$ Royal - Mashup (342).milk",
   "master": [
-   "9863b1ca5094",
-   "8754d3df7ac6",
-   "9863b1ca5094"
+   "5f46da26be35",
+   "2bdfdf921a42",
+   "2bdfdf921a42"
   ],
   "off": [
-   "9863b1ca5094",
-   "9863b1ca5094",
-   "9863b1ca5094"
+   "2bdfdf921a42",
+   "b0ee4b79b222",
+   "5f46da26be35"
   ],
   "master_repeatable": false,
   "overlap": true
  },
  {
-  "preset": "$$$ Royal - Mashup (471).milk",
+  "preset": "$$$ Royal - Mashup (389).milk",
   "master": [
-   "7690d6248f52",
-   "58695ea9d7d6",
-   "7690d6248f52"
+   "8754d3df7ac6",
+   "2e333168147e",
+   "2e333168147e"
   ],
   "off": [
-   "7690d6248f52",
-   "7690d6248f52",
-   "7690d6248f52"
+   "9863b1ca5094",
+   "2e333168147e",
+   "9863b1ca5094"
   ],
   "master_repeatable": false,
   "overlap": true
@@ -47,44 +62,59 @@
  {
   "preset": "$$$ Royal - Mashup (541).milk",
   "master": [
-   "259f534c36c6",
-   "259f534c36c6",
+   "ee4cc8c99aa9",
+   "ee4cc8c99aa9",
    "259f534c36c6"
   ],
   "off": [
    "259f534c36c6",
-   "259f534c36c6",
-   "ee4cc8c99aa9"
+   "ee4cc8c99aa9",
+   "ec5cec1e78ae"
   ],
-  "master_repeatable": true,
+  "master_repeatable": false,
   "overlap": true
  },
  {
-  "preset": "119.milk",
+  "preset": "238.milk",
   "master": [
-   "9a3679c0fdd5",
-   "9a3679c0fdd5",
-   "9a3679c0fdd5"
+   "6ee308a05951",
+   "cae64ada6114",
+   "cae64ada6114"
   ],
   "off": [
-   "9a3679c0fdd5",
-   "9a3679c0fdd5",
-   "caf495f98060"
+   "6ee308a05951",
+   "6ee308a05951",
+   "6ee308a05951"
   ],
-  "master_repeatable": true,
+  "master_repeatable": false,
+  "overlap": true
+ },
+ {
+  "preset": "323.milk",
+  "master": [
+   "c383da22ac41",
+   "c383da22ac41",
+   "3019ad050ee7"
+  ],
+  "off": [
+   "3019ad050ee7",
+   "3019ad050ee7",
+   "3019ad050ee7"
+  ],
+  "master_repeatable": false,
   "overlap": true
  },
  {
   "preset": "358.milk",
   "master": [
-   "163c8c9f8d23",
    "f47c18fd85af",
+   "163c8c9f8d23",
    "f47c18fd85af"
   ],
   "off": [
-   "f47c18fd85af",
-   "f47c18fd85af",
-   "6aef1ea56540"
+   "c383e4f6b3c3",
+   "c383e4f6b3c3",
+   "f47c18fd85af"
   ],
   "master_repeatable": false,
   "overlap": true
@@ -92,29 +122,14 @@
  {
   "preset": "379.milk",
   "master": [
-   "b0f0ab32f284",
-   "7d0a0d29a5b5",
-   "3d38ca1a4b1e"
+   "e28d69b2d0a0",
+   "1234abc4ab1f",
+   "1234abc4ab1f"
   ],
   "off": [
    "1234abc4ab1f",
-   "1234abc4ab1f",
+   "5bed5b873e61",
    "635fb0bfe8e4"
-  ],
-  "master_repeatable": false,
-  "overlap": false
- },
- {
-  "preset": "415.milk",
-  "master": [
-   "e5a715d3b564",
-   "27950816072b",
-   "e5a715d3b564"
-  ],
-  "off": [
-   "e5a715d3b564",
-   "e5a715d3b564",
-   "e5a715d3b564"
   ],
   "master_repeatable": false,
   "overlap": true
@@ -127,26 +142,11 @@
    "b6b8bdff87a7"
   ],
   "off": [
-   "fd840aeca148",
+   "7e76b7b50d63",
    "b6b8bdff87a7",
    "b6b8bdff87a7"
   ],
   "master_repeatable": true,
-  "overlap": true
- },
- {
-  "preset": "A Remixed Digital Echasketch  Again 2 martin - no religion  + disco Fruits Machine + Raron + mstress + R.milk",
-  "master": [
-   "2b84a5f52069",
-   "e5ca3cab530f",
-   "e5ca3cab530f"
-  ],
-  "off": [
-   "2b84a5f52069",
-   "2b84a5f52069",
-   "486b53ad68e3"
-  ],
-  "master_repeatable": false,
   "overlap": true
  },
  {
@@ -157,24 +157,24 @@
    "db61d1b91c8e"
   ],
   "off": [
-   "2d0280ef21c5",
    "6b2b5d8461c3",
-   "f5a7333ec2cf"
+   "db61d1b91c8e",
+   "6b2b5d8461c3"
   ],
   "master_repeatable": false,
   "overlap": true
  },
  {
-  "preset": "Benjam & Zylot - Fractal Timepiece - joyous leap into razors.milk",
+  "preset": "Benjam and Zylot - Tie-Dye Supernova (Sunspots Mix) - formation through spontaneous vacuum generation.milk",
   "master": [
-   "bb141ba379ce",
-   "bb141ba379ce",
-   "c72dbe0be4e2"
+   "576ead74ba4d",
+   "609b63fd9065",
+   "609b63fd9065"
   ],
   "off": [
-   "c72dbe0be4e2",
-   "bb141ba379ce",
-   "bb141ba379ce"
+   "576ead74ba4d",
+   "609b63fd9065",
+   "609b63fd9065"
   ],
   "master_repeatable": false,
   "overlap": true
@@ -184,27 +184,27 @@
   "master": [
    "f236b75e0924",
    "9279fb41852c",
-   "f236b75e0924"
-  ],
-  "off": [
-   "030ce7ce1725",
-   "034ffac7c81c",
    "034ffac7c81c"
   ],
+  "off": [
+   "9279fb41852c",
+   "f236b75e0924",
+   "9279fb41852c"
+  ],
   "master_repeatable": false,
-  "overlap": false
+  "overlap": true
  },
  {
   "preset": "Blendin to myself AdamFX Twist 2 martin - glassball dance with AdamFX f.milk",
   "master": [
    "b0513358ab19",
-   "ec6549d51ef6",
+   "7b08f6ac6be9",
    "b0513358ab19"
   ],
   "off": [
-   "b0513358ab19",
-   "b0513358ab19",
-   "7d10973e5a9c"
+   "7d10973e5a9c",
+   "ec6549d51ef6",
+   "7b08f6ac6be9"
   ],
   "master_repeatable": false,
   "overlap": true

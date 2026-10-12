@@ -1,0 +1,62 @@
+{
+ "presets": 124,
+ "failed": [
+  {
+   "preset": "Adam Eatit Mashup FX 2 martin - disco mix + Lodus + Geiss + Fruits Machine .milk",
+   "detail": {
+    "master-2160": "render: preset failed: /Users/jneerdael/Scripts/Projectm-TV/core/src/main/assets/presets/Adam Eatit Mashup FX 2 martin - disco mix + Lodus + Geiss + Fruits Machine .milk: [PerFrameContext] Could not compile per-frame code: syntax error, unexpected VAR(L26 C1)",
+    "branch-2160": "render: preset failed: /Users/jneerdael/Scripts/Projectm-TV/core/src/main/assets/presets/Adam Eatit Mashup FX 2 martin - disco mix + Lodus + Geiss + Fruits Machine .milk: [PerFrameContext] Could not compile per-frame code: syntax error, unexpected VAR(L26 C1)",
+    "authored-665": "render: preset failed: /Users/jneerdael/Scripts/Projectm-TV/core/src/main/assets/presets/Adam Eatit Mashup FX 2 martin - disco mix + Lodus + Geiss + Fruits Machine .milk: [PerFrameContext] Could not compile per-frame code: syntax error, unexpected VAR(L26 C1)",
+    "master-1080": "render: preset failed: /Users/jneerdael/Scripts/Projectm-TV/core/src/main/assets/presets/Adam Eatit Mashup FX 2 martin - disco mix + Lodus + Geiss + Fruits Machine .milk: [PerFrameContext] Could not compile per-frame code: syntax error, unexpected VAR(L26 C1)",
+    "branch-1080": "render: preset failed: /Users/jneerdael/Scripts/Projectm-TV/core/src/main/assets/presets/Adam Eatit Mashup FX 2 martin - disco mix + Lodus + Geiss + Fruits Machine .milk: [PerFrameContext] Could not compile per-frame code: syntax error, unexpected VAR(L26 C1)",
+    "branchoff-1080": "render: preset failed: /Users/jneerdael/Scripts/Projectm-TV/core/src/main/assets/presets/Adam Eatit Mashup FX 2 martin - disco mix + Lodus + Geiss + Fruits Machine .milk: [PerFrameContext] Could not compile per-frame code: syntax error, unexpected VAR(L26 C1)"
+   }
+  }
+ ],
+ "identity_mismatch": [
+  "$$$ Royal - Mashup (255).milk",
+  "$$$ Royal - Mashup (389).milk",
+  "$$$ Royal - Mashup (471).milk",
+  "$$$ Royal - Mashup (541).milk",
+  "119.milk",
+  "358.milk",
+  "379.milk",
+  "415.milk",
+  "A Feature Preset Master Exclusive ORB - Planetary Alignment Acidburn - Hexocollie, Flexi AdamFX,Martin  b.milk",
+  "A Remixed Digital Echasketch  Again 2 martin - no religion  + disco Fruits Machine + Raron + mstress + R.milk",
+  "An AdamFX n Martin Infusion 2 flexi - Why The Sky Looks Diffrent Today - AdamFx n Martin Infusion - Tack Tile Disfunction B.milk",
+  "Benjam & Zylot - Fractal Timepiece - joyous leap into razors.milk",
+  "Benjam and Zylot - Tie-Dye Supernova (Sunspots Mix) flx mrt - flx rnz.milk",
+  "Blendin to myself AdamFX Twist 2 martin - glassball dance with AdamFX f.milk"
+ ],
+ "repeat_mismatch": [],
+ "repeat_checked": 12,
+ "identity_checked": 123,
+ "measured": 103,
+ "ratio_master_2160": {
+  "median": 0.8918496052378201,
+  "within_10pct": 39,
+  "below_0.5": 21,
+  "above_1.5": 0
+ },
+ "ratio_branch_2160": {
+  "median": 1.0012468318207832,
+  "within_10pct": 67,
+  "below_0.5": 2,
+  "above_1.5": 2
+ },
+ "ratio_master_1080": {
+  "median": 0.951426862611073,
+  "within_10pct": 56,
+  "below_0.5": 4,
+  "above_1.5": 0
+ },
+ "ratio_branch_1080": {
+  "median": 1.003120590332745,
+  "within_10pct": 81,
+  "below_0.5": 1,
+  "above_1.5": 1
+ },
+ "closer_to_authored_2160": 70,
+ "further_from_authored_2160": 20
+}
