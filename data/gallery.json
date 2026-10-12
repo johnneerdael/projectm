@@ -1,0 +1,402 @@
+[
+ {
+  "index": 37,
+  "preset": "13.milk",
+  "authored": 0.148573,
+  "master_2160": 0.0292543,
+  "branch_2160": 0.155365,
+  "master_1080": 0.116696,
+  "branch_1080": 0.150978,
+  "ratio_master_2160": 0.19690185969186863,
+  "ratio_branch_2160": 1.0457149010923923,
+  "ratio_master_1080": 0.7854455385568037,
+  "ratio_branch_1080": 1.0161873287878684,
+  "mean_abs_difference_2160": 0.3258569754806219,
+  "crop_origin": [
+   128,
+   832
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 1,
+  "top30_rank": 1,
+  "crop": null
+ },
+ {
+  "index": 32,
+  "preset": "$$$ Royal - Mashup (541).milk",
+  "authored": 0.234406,
+  "master_2160": 0.113934,
+  "branch_2160": 0.240619,
+  "master_1080": 0.180716,
+  "branch_1080": 0.247744,
+  "ratio_master_2160": 0.4860541112428862,
+  "ratio_branch_2160": 1.0265052942330828,
+  "ratio_master_1080": 0.7709529619548987,
+  "ratio_branch_1080": 1.0569012738581776,
+  "mean_abs_difference_2160": 0.2944490021350337,
+  "crop_origin": [
+   320,
+   0
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 2,
+  "top30_rank": 2,
+  "crop": null
+ },
+ {
+  "index": 38,
+  "preset": "14.milk",
+  "authored": 0.157717,
+  "master_2160": 0.00770808,
+  "branch_2160": 0.170448,
+  "master_1080": 0.0844538,
+  "branch_1080": 0.163563,
+  "ratio_master_2160": 0.048872854543264205,
+  "ratio_branch_2160": 1.0807205310778165,
+  "ratio_master_1080": 0.5354768350907004,
+  "ratio_branch_1080": 1.037066391067545,
+  "mean_abs_difference_2160": 0.28837262321920953,
+  "crop_origin": [
+   128,
+   896
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 3,
+  "top30_rank": 3,
+  "crop": null
+ },
+ {
+  "index": 4,
+  "preset": "$$$ Royal - Mashup (137).milk",
+  "authored": 0.608914,
+  "master_2160": 0.479945,
+  "branch_2160": 0.610064,
+  "master_1080": 0.553871,
+  "branch_1080": 0.609498,
+  "ratio_master_2160": 0.7881983334263952,
+  "ratio_branch_2160": 1.0018886082435288,
+  "ratio_master_1080": 0.9096046403925678,
+  "ratio_branch_1080": 1.000959084534105,
+  "mean_abs_difference_2160": 0.20619378183402268,
+  "crop_origin": [
+   896,
+   1088
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 4,
+  "top30_rank": 9,
+  "crop": "img/crop/04.png"
+ },
+ {
+  "index": 0,
+  "preset": "$$$ Royal - Mashup (1).milk",
+  "authored": 0.320987,
+  "master_2160": 0.274651,
+  "branch_2160": 0.320785,
+  "master_1080": 0.307351,
+  "branch_1080": 0.320441,
+  "ratio_master_2160": 0.8556452441999207,
+  "ratio_branch_2160": 0.9993706910248701,
+  "ratio_master_1080": 0.9575185287877701,
+  "ratio_branch_1080": 0.9982989965325697,
+  "mean_abs_difference_2160": 0.17462123796051623,
+  "crop_origin": [
+   1664,
+   1344
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 5,
+  "top30_rank": 14,
+  "crop": null
+ },
+ {
+  "index": 20,
+  "preset": "$$$ Royal - Mashup (355).milk",
+  "authored": 0.215901,
+  "master_2160": 0.0917681,
+  "branch_2160": 0.225534,
+  "master_1080": 0.157434,
+  "branch_1080": 0.219191,
+  "ratio_master_2160": 0.42504712808185235,
+  "ratio_branch_2160": 1.0446176719885503,
+  "ratio_master_1080": 0.7291953256353606,
+  "ratio_branch_1080": 1.0152384657782965,
+  "mean_abs_difference_2160": 0.15667549582088694,
+  "crop_origin": [
+   1600,
+   896
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 6,
+  "top30_rank": 17,
+  "crop": "img/crop/06.png"
+ },
+ {
+  "index": 5,
+  "preset": "$$$ Royal - Mashup (147).milk",
+  "authored": 0.0731911,
+  "master_2160": 0.00941144,
+  "branch_2160": 0.110819,
+  "master_1080": 0.0246352,
+  "branch_1080": 0.10261,
+  "ratio_master_2160": 0.12858721893782168,
+  "ratio_branch_2160": 1.5141048570113034,
+  "ratio_master_1080": 0.33658737196189153,
+  "ratio_branch_1080": 1.4019464115172475,
+  "mean_abs_difference_2160": 0.12942361270680147,
+  "crop_origin": [
+   1600,
+   960
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 7,
+  "top30_rank": 20,
+  "crop": null
+ },
+ {
+  "index": 108,
+  "preset": "Bdrv yin - 315 - Ocean of Light (yo im peakin yo EoS-Phat) BDRV et  AL  rmxmix3.milk",
+  "authored": 0.197719,
+  "master_2160": 0.070744,
+  "branch_2160": 0.198527,
+  "master_1080": 0.124059,
+  "branch_1080": 0.198336,
+  "ratio_master_2160": 0.3578007171794314,
+  "ratio_branch_2160": 1.0040866077615203,
+  "ratio_master_1080": 0.6274510795624093,
+  "ratio_branch_1080": 1.003120590332745,
+  "mean_abs_difference_2160": 0.12935861325731465,
+  "crop_origin": [
+   1280,
+   448
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 8,
+  "top30_rank": 21,
+  "crop": "img/crop/08.png"
+ },
+ {
+  "index": 84,
+  "preset": "A Tribute to Martin - bombyx mori - Ft Flexi - AdamFX - StahlRegen - Krash - Rovastar -  Hd in Milk S.milk",
+  "authored": 0.294243,
+  "master_2160": 0.175513,
+  "branch_2160": 0.30562,
+  "master_1080": 0.229925,
+  "branch_1080": 0.30627,
+  "ratio_master_2160": 0.5964899759722407,
+  "ratio_branch_2160": 1.0386653208402579,
+  "ratio_master_1080": 0.7814119622217012,
+  "ratio_branch_1080": 1.0408743793395254,
+  "mean_abs_difference_2160": 0.10507788564644607,
+  "crop_origin": [
+   3200,
+   0
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 9,
+  "top30_rank": 23,
+  "crop": "img/crop/09.png"
+ },
+ {
+  "index": 69,
+  "preset": "403 xfr+.milk",
+  "authored": 0.505094,
+  "master_2160": 0.32211,
+  "branch_2160": 0.465719,
+  "master_1080": 0.421752,
+  "branch_1080": 0.52756,
+  "ratio_master_2160": 0.6377228793056342,
+  "ratio_branch_2160": 0.9220442135523288,
+  "ratio_master_1080": 0.8349970500540493,
+  "ratio_branch_1080": 1.0444788494814827,
+  "mean_abs_difference_2160": 0.10382215462478937,
+  "crop_origin": [
+   1088,
+   1344
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 10,
+  "top30_rank": 24,
+  "crop": null
+ },
+ {
+  "index": 2,
+  "preset": "$$$ Royal - Mashup (118).milk",
+  "authored": 0.290995,
+  "master_2160": 0.180615,
+  "branch_2160": 0.251784,
+  "master_1080": 0.237143,
+  "branch_1080": 0.288307,
+  "ratio_master_2160": 0.6206807677107854,
+  "ratio_branch_2160": 0.8652519802745752,
+  "ratio_master_1080": 0.8149384010034536,
+  "ratio_branch_1080": 0.9907627278819223,
+  "mean_abs_difference_2160": 0.09834158654306449,
+  "crop_origin": [
+   0,
+   448
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 11,
+  "top30_rank": 25,
+  "crop": null
+ },
+ {
+  "index": 92,
+  "preset": "AdamFX 2 Geiss - Mash-Up - Angelic  Staine Glass Chapters 4.milk",
+  "authored": 0.323007,
+  "master_2160": 0.309771,
+  "branch_2160": 0.342709,
+  "master_1080": 0.323154,
+  "branch_1080": 0.340772,
+  "ratio_master_2160": 0.9590225598826032,
+  "ratio_branch_2160": 1.0609955821390868,
+  "ratio_master_1080": 1.0004550984963174,
+  "ratio_branch_1080": 1.054998808075367,
+  "mean_abs_difference_2160": 0.08924597197887944,
+  "crop_origin": [
+   256,
+   0
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 12,
+  "top30_rank": 26,
+  "crop": null
+ },
+ {
+  "index": 70,
+  "preset": "413.milk",
+  "authored": 0.252487,
+  "master_2160": 0.15055,
+  "branch_2160": 0.232462,
+  "master_1080": 0.207754,
+  "branch_1080": 0.25204,
+  "ratio_master_2160": 0.5962683227255264,
+  "ratio_branch_2160": 0.9206889859675943,
+  "ratio_master_1080": 0.822830482361468,
+  "ratio_branch_1080": 0.9982296118215986,
+  "mean_abs_difference_2160": 0.08916162229051777,
+  "crop_origin": [
+   2624,
+   448
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 13,
+  "top30_rank": 27,
+  "crop": "img/crop/13.png"
+ },
+ {
+  "index": 40,
+  "preset": "153.milk",
+  "authored": 0.10326,
+  "master_2160": 0.0189953,
+  "branch_2160": 0.129346,
+  "master_1080": 0.0443649,
+  "branch_1080": 0.109193,
+  "ratio_master_2160": 0.18395603331396473,
+  "ratio_branch_2160": 1.2526244431532054,
+  "ratio_master_1080": 0.4296426496223126,
+  "ratio_branch_1080": 1.0574569049002518,
+  "mean_abs_difference_2160": 0.08077830146340763,
+  "crop_origin": [
+   0,
+   448
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 14,
+  "top30_rank": 28,
+  "crop": "img/crop/14.png"
+ },
+ {
+  "index": 73,
+  "preset": "434.milk",
+  "authored": 0.0869264,
+  "master_2160": 0.0426589,
+  "branch_2160": 0.0879878,
+  "master_1080": 0.0665095,
+  "branch_1080": 0.0917986,
+  "ratio_master_2160": 0.4907473448802665,
+  "ratio_branch_2160": 1.0122103296581937,
+  "ratio_master_1080": 0.7651242890537282,
+  "ratio_branch_1080": 1.0560497156214912,
+  "mean_abs_difference_2160": 0.08055448345109528,
+  "crop_origin": [
+   1472,
+   512
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 15,
+  "top30_rank": 29,
+  "crop": "img/crop/15.png"
+ },
+ {
+  "index": 16,
+  "preset": "$$$ Royal - Mashup (295).milk",
+  "authored": 0.220985,
+  "master_2160": 0.00466411,
+  "branch_2160": 0.153521,
+  "master_1080": 0.0594472,
+  "branch_1080": 0.145768,
+  "ratio_master_2160": 0.02110600266986447,
+  "ratio_branch_2160": 0.6947123107903251,
+  "ratio_master_1080": 0.26901011380862955,
+  "ratio_branch_1080": 0.6596284815711474,
+  "mean_abs_difference_2160": 0.07842279322007123,
+  "crop_origin": [
+   2816,
+   1728
+  ],
+  "crop_size": [
+   640,
+   360
+  ],
+  "gallery_number": 16,
+  "top30_rank": 30,
+  "crop": null
+ }
+]

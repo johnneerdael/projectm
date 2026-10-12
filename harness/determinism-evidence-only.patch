@@ -1,0 +1,112 @@
+diff --git a/src/libprojectM/MilkdropPreset/PresetState.cpp b/src/libprojectM/MilkdropPreset/PresetState.cpp
+index 72c0f61ca..d4986b44f 100644
+--- a/src/libprojectM/MilkdropPreset/PresetState.cpp
++++ b/src/libprojectM/MilkdropPreset/PresetState.cpp
+@@ -19,7 +19,7 @@ PresetState::PresetState()
+     : globalMemory(projectm_eval_memory_buffer_create())
+ {
+     std::random_device randomDevice;
+-    std::mt19937 randomGenerator(randomDevice());
++    std::mt19937 randomGenerator(12345u); (void)randomDevice;
+     std::uniform_int_distribution<> distrib(0, std::numeric_limits<int>::max());
+ 
+     hueRandomOffsets[0] = static_cast<float>(distrib(randomGenerator) % 64841L) * 0.01f;
+diff --git a/src/libprojectM/Renderer/MilkdropNoise.cpp b/src/libprojectM/Renderer/MilkdropNoise.cpp
+index 20d5f0bd6..f2ae5b943 100644
+--- a/src/libprojectM/Renderer/MilkdropNoise.cpp
++++ b/src/libprojectM/Renderer/MilkdropNoise.cpp
+@@ -53,7 +53,7 @@ auto MilkdropNoise::GetPreferredInternalFormat() -> int
+ 
+ auto MilkdropNoise::generate2D(int size, int zoomFactor) -> std::vector<uint32_t>
+ {
+-    uint32_t randomSeed = static_cast<uint32_t>(std::chrono::system_clock::now().time_since_epoch().count());
++    uint32_t randomSeed = 12345u;
+     std::default_random_engine randomGenerator(randomSeed);
+     std::uniform_int_distribution<int> randomDistribution(0, INT32_MAX);
+ 
+@@ -140,7 +140,7 @@ auto MilkdropNoise::generate2D(int size, int zoomFactor) -> std::vector<uint32_t
+ 
+ auto MilkdropNoise::generate3D(int size, int zoomFactor) -> std::vector<uint32_t>
+ {
+-    uint32_t randomSeed = static_cast<uint32_t>(std::chrono::system_clock::now().time_since_epoch().count());
++    uint32_t randomSeed = 12345u;
+     std::default_random_engine randomGenerator(randomSeed);
+     std::uniform_int_distribution<int> randomDistribution(0, INT32_MAX);
+ 
+diff --git a/src/libprojectM/Renderer/Texture.cpp b/src/libprojectM/Renderer/Texture.cpp
+index 962ee1289..bf538b876 100644
+--- a/src/libprojectM/Renderer/Texture.cpp
++++ b/src/libprojectM/Renderer/Texture.cpp
+@@ -1,3 +1,4 @@
++#include <vector>
+ #include "Renderer/Texture.hpp"
+ 
+ #include <utility>
+@@ -151,7 +152,8 @@ void Texture::CreateNewTexture()
+     switch (m_target)
+     {
+         case GL_TEXTURE_2D:
+-            glTexImage2D(m_target, 0, m_internalFormat, m_width, m_height, 0, m_format, m_type, nullptr);
++            { static std::vector<unsigned char> zeros; zeros.assign(static_cast<size_t>(m_width) * m_height * 16, 0); /* evidence-only */
++            glTexImage2D(m_target, 0, m_internalFormat, m_width, m_height, 0, m_format, m_type, zeros.data()); }
+             break;
+         case GL_TEXTURE_3D:
+             glTexImage3D(m_target, 0, m_internalFormat, m_width, m_height, m_depth, 0, m_format, m_type, nullptr);
+diff --git a/src/libprojectM/Renderer/TextureAttachment.cpp b/src/libprojectM/Renderer/TextureAttachment.cpp
+index 48515207e..e117d0abc 100644
+--- a/src/libprojectM/Renderer/TextureAttachment.cpp
++++ b/src/libprojectM/Renderer/TextureAttachment.cpp
+@@ -1,3 +1,4 @@
++#include <vector>
+ #include "Renderer/TextureAttachment.hpp"
+ 
+ // OpenGL ES might not define this constant in its headers, e.g. in the iOS and Emscripten SDKs.
+@@ -109,7 +110,8 @@ void TextureAttachment::ReplaceTexture(int width, int height)
+     GLuint textureId;
+     glGenTextures(1, &textureId);
+     glBindTexture(GL_TEXTURE_2D, textureId);
+-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, textureFormat, pixelFormat, nullptr);
++    static std::vector<unsigned char> zeros; zeros.assign(static_cast<size_t>(width) * height * 16, 0); /* evidence-only: defined initial contents */
++    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, textureFormat, pixelFormat, zeros.data());
+ 
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+diff --git a/src/libprojectM/Renderer/TextureManager.cpp b/src/libprojectM/Renderer/TextureManager.cpp
+index ed6a13877..779bc86ea 100644
+--- a/src/libprojectM/Renderer/TextureManager.cpp
++++ b/src/libprojectM/Renderer/TextureManager.cpp
+@@ -285,7 +285,7 @@ auto TextureManager::GetRandomTexture(const std::string& randomName) -> TextureS
+     std::string selectedFilename;
+ 
+     std::random_device rndDevice;
+-    std::default_random_engine rndEngine(rndDevice());
++    std::default_random_engine rndEngine(12345u); (void)rndDevice;
+ 
+     ScanTextures();
+ 
+diff --git a/src/libprojectM/TimeKeeper.cpp b/src/libprojectM/TimeKeeper.cpp
+index 6c1817b84..824db2c7f 100644
+--- a/src/libprojectM/TimeKeeper.cpp
++++ b/src/libprojectM/TimeKeeper.cpp
+@@ -11,7 +11,7 @@ TimeKeeper::TimeKeeper(double presetDuration, double smoothDuration, double hard
+     , m_softCutDuration(smoothDuration)
+     , m_hardCutDuration(hardcutDuration)
+ {
+-    UpdateTimers();
++    m_currentTime = 0.0; // evidence-only: no wall-clock origin
+ }
+ 
+ void TimeKeeper::SetFrameTime(double secondsSinceStart)
+diff --git a/src/libprojectM/TimeKeeper.hpp b/src/libprojectM/TimeKeeper.hpp
+index 949bcf5c2..38241c3cc 100644
+--- a/src/libprojectM/TimeKeeper.hpp
++++ b/src/libprojectM/TimeKeeper.hpp
+@@ -110,7 +110,7 @@ private:
+     std::chrono::high_resolution_clock::time_point m_startTime{std::chrono::high_resolution_clock::now()};
+ 
+     std::random_device m_randomDevice{};
+-    std::mt19937 m_randomGenerator{m_randomDevice()};
++    std::mt19937 m_randomGenerator{12345u};
+ 
+     double m_userSpecifiedTime{-1.0}; //!< User-specifed run time. If set to a value >= 0.0, this time is used instead of the system clock.
+ 
