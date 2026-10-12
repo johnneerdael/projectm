@@ -12,11 +12,15 @@ Every preset was rendered three ways, on the same frames:
 | Role | Library | Render size | Lines |
 |---|---|---|---|
 | upstream | `master` at `349b7cc2d` | 3840×2160 (also 1920×1080) | 1 px GL lines |
-| this PR | `feat/quad-lines-682` at `f673d847c` | 3840×2160 (also 1920×1080) | reference size 1024×768: 3.25 px at 4K, 1.62 px at 1080p |
+| this PR | `feat/quad-lines-682` at `798483e93` (see below) | 3840×2160 (also 1920×1080) | reference size 1024×768: 3.25 px at 4K, 1.62 px at 1080p |
 | authored look | `master` at `349b7cc2d` | 1182×665 | 1 px GL lines |
 
 1182×665 is 16:9 with the area of 1024×768, Milkdrop's authoring resolution: the size at which a
 1 px line covers the share of the picture the preset author saw.
+
+The renders used `798483e93`. The branch's later commits change only the SDL test UI's line endings
+(`f673d847c`) and create the motion vector buffers on first use (`e82d72777`); with the latter,
+Fvese-mvfun2 (64×48 motion vectors) renders a byte-identical 4K frame 239.
 
 A fourth run renders this PR with the reference size **0** (the default) and checks that it is
 byte-identical to upstream.
